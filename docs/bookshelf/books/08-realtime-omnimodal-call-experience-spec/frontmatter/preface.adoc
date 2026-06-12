@@ -3,6 +3,6 @@
 
 本书把“类似 ChatGPT 高级语音、Gemini Live 或豆包视频通话的体验”转写为稳定的对象语言。产品名只提供公开经验坐标；本书的核心定义不依赖任何单一产品。
 
-需求提出者可从对象身份、目标和符合性模型理解要验收的体验。产品负责人可从用户旅程和公共投影理解用户在每个状态下应当看见什么。架构师和开发者可从动态语义和可观察承诺理解实现必须对外承担的行为。测试工程师和供应商评审者可从符合性断言和不符合案例判断一个实现是否成立。安全、隐私与运营负责人可从治理边界理解摄像头、麦克风、工具调用、成本和数据处理的公共约束。
+需求提出者可从 xref:realtime-omnimodal-call-experience[对象身份]、xref:stakeholder-goals[目标愿望]和xref:conformance-model[符合性模型]理解要验收的体验。产品负责人可从xref:part-dynamic-experience[用户旅程与动态语义]和xref:part-public-projection[公共投影与可观察承诺]理解用户在每个状态下应当看见什么。架构师和开发者可从xref:session-lifecycle[会话生命周期]、xref:observable-state-model[可观察状态模型]和xref:user-visible-feedback[用户可见反馈]理解实现必须对外承担的行为。测试工程师和供应商评审者可从xref:part-conformance-assertions[符合性断言与不符合案例]判断一个实现是否成立。安全、隐私与运营负责人可从xref:part-quality-governance[质量、治理与符合性声明]理解摄像头、麦克风、工具调用、成本和数据处理的公共约束。
 
 本书使用“必须”“不得”“应当”“可以”表达规范强度。规范性语句只用于影响符合性判断的位置；解释、例子和参考坐标不自动构成符合性要求。

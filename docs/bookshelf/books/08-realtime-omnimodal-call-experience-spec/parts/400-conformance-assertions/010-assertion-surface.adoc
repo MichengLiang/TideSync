@@ -12,11 +12,11 @@
 
 [source,asciidoc]
 ----
-[#camera-capture-state-visible.assertion, normative=must]
-=== 摄像头采集状态可见
+[#current-visible-object-answerable.assertion, normative=must]
+=== 当前可见对象可被询问
 ----
 
-`#camera-capture-state-visible` 是交叉引用地址。`.assertion` 表示标题身份。`normative=must` 表示规范强度。其他章节引用该断言时，使用 `xref:camera-capture-state-visible[摄像头采集状态可见]`。
+`#current-visible-object-answerable` 是交叉引用地址。`.assertion` 表示标题身份。`normative=must` 表示规范强度。其他章节引用该断言时，使用 xref:current-visible-object-answerable[当前可见对象可被询问]。
 
 断言不使用孤立字面量编号作为主要引用对象。编号字符串容易脱离书稿结构；标题 ID 能与目录、交叉引用和投影工具共同工作。
 

@@ -1,0 +1,65 @@
+[#appendix-structured-surface]
+= 附录 D：结构化表面约定
+
+本书使用稳定标题、role、rel 和附加字段表达可维护的书稿结构。读者通过标题和交叉引用阅读文本；维护者和工具链通过同一表面识别对象身份、关系和规范强度。
+
+[#appendix-heading-id]
+== 稳定标题
+
+重要章节和断言使用显式 ID。ID 写在标题前一行的 attrlist 中。
+
+[source,asciidoc]
+----
+[#visual-reference-flow.flow]
+== 视觉指代流
+
+[#current-visible-object-answerable.assertion, normative=must]
+=== 当前可见对象可被询问
+----
+
+ID 是交叉引用地址。标题文本是读者可见名称。移动文件或调整章节顺序时，稳定 ID 不应随路径变化而改变。
+
+[#appendix-role-vocabulary]
+== role 词表
+
+role 标明标题身份。同一个 role 在全书中保持同一含义。
+
+[horizontal]
+concept:: 概念定义。
+domain:: 领域事实。
+goal:: 目标愿望。
+requirement:: 统摄性要求。
+boundary:: 对象边界或能力边界。
+contract:: 公共契约、符合性模型或治理规则。
+flow:: 用户旅程、动态语义或状态转移路径。
+state:: 用户可观察状态。
+assertion:: 符合性断言。
+nonconformance:: 不符合案例。
+
+role 不替代正文。它只标明标题身份；标题下的文字仍需要完成定义、论证或判定职责。
+
+[#appendix-rel-vocabulary]
+== rel 关系谓词
+
+rel 写在 xref 的属性中，表示当前标题到目标标题的关系。xref 所在标题是关系起点，xref 指向标题是关系终点。
+
+[horizontal]
+verifies:: 当前断言或覆盖条目验证目标要求、流程、状态或公共契约。
+depends-on:: 当前判断依赖目标章节提供的对象、事实或规则。
+constrains:: 当前章节约束目标对象的合法范围或行为边界。
+extends:: 当前章节描述目标对象的扩展能力。
+defines:: 当前章节定义目标对象。
+
+没有 rel 的普通 xref 只表达参见关系。需要被覆盖映射、断言或维护工具识别的关系，应写入 rel。
+
+[#appendix-normative-field]
+== normative 字段
+
+`normative` 字段写在要求或断言标题 attrlist 中，表示规范强度。
+
+[horizontal]
+must:: 核心要求或核心断言。失败时，实现不能核心符合。
+should:: 强要求或强断言。失败时，实现需要偏离声明。
+may:: 可选能力或扩展断言。实现未声明该能力时，不适用。
+
+`normative` 字段服务符合性判定。解释性章节、参考产品说明和普通例子不使用该字段。

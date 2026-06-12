@@ -131,6 +131,9 @@ include::backmatter/appendix-b-assertion-template.adoc[]
 [appendix]
 include::backmatter/appendix-c-reference-product-notes.adoc[]
 
+[appendix]
+include::backmatter/appendix-d-structured-surface.adoc[]
+
 [glossary]
 include::backmatter/glossary.adoc[]
 

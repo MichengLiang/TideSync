@@ -29,7 +29,7 @@
 |xref:session-entry-observable[会话入口可观察]；xref:capture-state-remains-visible[采集状态持续可见]；xref:permission-revocation-updates-state[权限撤回更新状态]；xref:recovery-state-consistent[恢复后状态一致]
 
 |错误与隐私边界
-|xref:permission-error-actionable[权限错误提供可行动路径]；xref:network-error-not-disguised[网络错误不伪装成思考]；xref:hidden-capture-nonconformance[隐藏采集不符合体验契约]
+|xref:permission-error-actionable[权限错误提供可行动路径]；xref:network-error-not-disguised[网络错误不伪装成思考]；xref:capture-state-remains-visible[采集状态持续可见]；xref:session-end-stops-capture[会话结束停止采集]
 |===
 
 [#coverage-flow-map.contract]

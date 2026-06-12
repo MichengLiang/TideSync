@@ -25,3 +25,4 @@
 * xref:conformance-statement[符合性声明]
 * xref:privacy-projection[隐私投影]
 * xref:tool-use-projection[工具调用投影]
+* xref:appendix-structured-surface[结构化表面约定]

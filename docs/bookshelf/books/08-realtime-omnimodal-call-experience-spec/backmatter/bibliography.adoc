@@ -7,6 +7,7 @@
 * [[[rfc8174]]] B. Leiba, “Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words”, RFC 8174, 2017.
 * [[[jcp-tck-guide]]] Java Community Process, Spec Lead Guide: Developing Technology Compatibility Kits.
 * [[[gherkin-reference]]] Cucumber Documentation, Gherkin Reference.
+* [[[structured-writing-conventions]]] 本书架《结构化书写约定标本》。
 * [[[openai-gpt4o]]] OpenAI, Hello GPT-4o.
 * [[[google-live-api]]] Google AI for Developers, Gemini Live API.
 * [[[bytedance-seed-voice]]] 字节跳动 Seed, 豆包实时语音大模型公开材料。
