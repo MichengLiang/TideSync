@@ -16,7 +16,9 @@
 
 不符合表现:: 会导致断言失败的典型行为。
 
-覆盖对象:: xref:camera-permission[摄像头授权, rel=verifies]。
+覆盖对象:: xref:target-requirement-id[目标要求标题, rel=verifies]。
 ----
+
+模板中的 `target-requirement-id` 表示被断言验证的目标标题。正式断言应替换为本书内真实存在的要求、流程、状态或公共契约标题。
 
 断言标题应表达行为判定，而不是内部实现。`normative` 字段使用 `must`、`should` 或 `may`。断言正文检查用户表面，不检查内部代码。
