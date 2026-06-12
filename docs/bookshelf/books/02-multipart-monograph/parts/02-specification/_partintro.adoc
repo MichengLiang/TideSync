@@ -1,1 +1,0 @@
-本部说明 part 对 `book.adoc` 的结构要求。part、chapter 和后置章节共同组成同一本 book。

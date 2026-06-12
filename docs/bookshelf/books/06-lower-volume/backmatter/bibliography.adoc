@@ -1,3 +1,0 @@
-== 参考资料
-
-* [[[upper-volume]]] 样本 `05-upper-volume` 展示上册入口和核心模型 anchor。

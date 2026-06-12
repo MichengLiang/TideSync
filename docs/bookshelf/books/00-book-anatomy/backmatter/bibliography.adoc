@@ -1,6 +1,0 @@
-= 参考资料
-
-每条参考资料可使用 bibliography anchor 作为稳定引用目标。
-
-* [[[asciidoctor-section-styles]]] Asciidoctor Docs, Section Styles for Articles and Books, https://docs.asciidoctor.org/asciidoc/latest/sections/styles/
-* [[[asciidoctor-parts]]] Asciidoctor Docs, Book Parts, https://docs.asciidoctor.org/asciidoc/latest/sections/parts/

@@ -1,5 +1,0 @@
-= 附录 A：part 速查
-
-* `= 第一部`：同一本 book 内部的 part。
-* `[partintro]`：part 开头的说明块。
-* `== 章标题`：part 下的 chapter。

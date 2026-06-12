@@ -1,2 +1,0 @@
-[#partintro-example]
-本部说明为什么同一本长书需要 part。part intro 为该部提供进入正文之前的过渡说明。

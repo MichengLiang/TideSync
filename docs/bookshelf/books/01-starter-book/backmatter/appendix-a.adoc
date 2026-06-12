@@ -1,9 +1,0 @@
-== 附录 A：最小文件清单
-
-普通新书通常需要：
-
-* `book.adoc`
-* `frontmatter/preface.adoc`
-* `chapters/`
-* `backmatter/`
-* `assets/images/`

@@ -1,6 +1,13 @@
-# My Books
+# TideSync Bookshelf
 
-This is an AsciiDoc multi-book workspace. It starts with sample books that show common ways to organize independent books, multipart books, technical books, reference material, split volumes, and structured writing conventions.
+This directory maintains the TideSync realtime omnimodal video-call experience specification.
+
+## Books
+
+- `books/08-realtime-omnimodal-call-experience-spec/book.adoc` is the main specification. It defines the experience object, constitutive conditions, user journeys, public projections, black-box assertions, governance boundaries, and conformance statements for realtime omnimodal AI video and voice calls.
+- `books/07-structured-writing-conventions/book.adoc` records the structured writing conventions used by the main specification, including stable heading IDs, `role`, `rel`, additional fields, and cross-reference practices.
+
+`catalog.adoc` is the bookshelf entry point. It should route readers by role, judgment question, and maintained book.
 
 ## Install
 
@@ -45,22 +52,14 @@ pnpm run clean
 
 This removes `build/`.
 
-## Delete Sample Books
+## Maintain Books
 
-Delete `books/<book-id>/`, then remove the matching `xref:books/<book-id>/book.adoc[...]` entry from `catalog.adoc`. Each default sample is independent, so no other sample book needs to be edited.
+Each book lives in `books/<book-id>/` and exposes `book.adoc` as its entry file. Add a book to `catalog.adoc` only when it belongs to this bookshelf's maintained specification surface.
 
-Run:
+When removing a book, delete `books/<book-id>/`, remove every matching `xref:books/<book-id>/book.adoc[...]` entry from `catalog.adoc`, and run:
 
 ```bash
 pnpm run check
 ```
 
-## Add A Book
-
-Copy `books/01-starter-book` to `books/<your-book-id>`, edit `book.adoc` and chapter files, then add the new book to `catalog.adoc`.
-
-To look at the original samples again, initialize a temporary workspace:
-
-```bash
-pnpm create asciidoc-multi-book-workspace sample-look
-```
+The check command is the local contract for catalog entries, discovered books, cross-book anchors, and generated HTML resources.

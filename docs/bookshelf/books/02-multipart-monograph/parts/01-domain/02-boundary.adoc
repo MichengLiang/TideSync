@@ -1,5 +1,0 @@
-== part 的边界
-
-part 不拥有独立 `book.adoc`。它由同一本 `book.adoc` 中的 level 0 标题声明。
-
-part 下的 chapter 仍属于同一本书。

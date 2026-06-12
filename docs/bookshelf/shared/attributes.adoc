@@ -1,2 +1,2 @@
-:series-name: AsciiDoc 多本书工作区示例
+:series-name: 实时全模态视频通话体验规约书架
 :source-format: AsciiDoc

@@ -1,6 +1,6 @@
-= AsciiDoc 多书工作区
-作者 <author@example.com>
-v0.1, 2026-05
+= 实时全模态视频通话体验规约书架
+弥澄亮 <t103ooooo@stu.mju.edu.cn>
+v0.1, 2026-06
 :toc: left
 :toclevels: 2
 :icons: font
@@ -8,73 +8,55 @@ v0.1, 2026-05
 :idprefix:
 :idseparator: -
 
-本页是样本书导航。每本书代表一种常见书籍组织场景。
+本书架维护实时全模态视频通话体验的规约书稿。主书定义用户通过麦克风提供语音、通过摄像头或等价视觉输入提供当前视觉现场，并由 AI 在同一会话中以自然语音作出上下文相关回应时，一个实现必须承担的体验承诺、可观察状态、黑盒断言和符合性声明。
 
-== 按目标选择
+== 主书稿
+
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc[08 实时全模态视频通话体验规约与符合性判定]：定义实时全模态视频通话体验的对象身份、构成性条件、用户旅程、公共投影、符合性断言、治理边界和符合性声明。
+
+== 按角色进入
 
 [cols="1,2,3", options="header"]
 |===
-|如果你想... |先看 |原因
+|读者角色 |入口 |关注对象
 
-|认识一本完整 AsciiDoc book 的结构位置
-|xref:books/00-book-anatomy/book.adoc[00 完整书籍结构标本]
-|它集中展示前置、正文、分部和后置结构。
+|需求提出者
+|xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#realtime-omnimodal-call-experience[对象身份]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#stakeholder-goals[目标愿望]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#conformance-model[符合性模型]
+|要验收的体验、利益相关者目标和符合性判定方式。
 
-|复制一个普通单书起点
-|xref:books/01-starter-book/book.adoc[01 日常独立单书]
-|它保持最常用、最少负担的 book 结构。
+|产品负责人
+|xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#part-dynamic-experience[用户旅程与动态语义]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#part-public-projection[公共投影与可观察承诺]
+|用户在进入、授权、对话、打断、受限、恢复和结束时应观察到的状态与反馈。
 
-|在同一本书里组织第一部、第二部
-|xref:books/02-multipart-monograph/book.adoc[02 长书分部]
-|它展示 book doctype 下的 part 与 partintro。
+|架构师与开发者
+|xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#session-lifecycle[会话生命周期]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#observable-state-model[可观察状态模型]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#user-visible-feedback[用户可见反馈]
+|实现对外承担的输入、输出、状态、打断、错误和限制语义。
 
-|写带代码、图表、共享资源的技术书
-|xref:books/03-technical-book-workflow/book.adoc[03 技术书工作流]
-|它展示资源边界、图表和构建检查。
+|测试工程师与供应商评审者
+|xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#part-conformance-assertions[符合性断言与不符合案例]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#coverage-map[覆盖映射]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#appendix-conformance-checklist[符合性检查表]
+|给定前置状态和用户动作后，系统是否出现本书要求的可观察结果。
 
-|查结构选择、术语和写法模式
-|xref:books/04-reference-manual/book.adoc[04 参考手册]
-|它是查阅型书，而不是线性教程。
-
-|组织可独立发布的上册
-|xref:books/05-upper-volume/book.adoc[05 上册]
-|它展示分卷上册作为独立 book 的入口。
-
-|组织可独立发布的下册
-|xref:books/06-lower-volume/book.adoc[06 下册]
-|它用文本示例说明跨卷引用写法，但不真实依赖上册。
-
-|让源书稿保持可读，同时保留可被工具链读取的结构关系
-|xref:books/07-structured-writing-conventions/book.adoc[07 结构化书写约定标本]
-|它展示标题、稳定 ID、role、xref、rel 和附加字段如何形成结构化书稿表面。
-
-|定义并判定实时全模态 AI 视频语音通话体验
-|xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc[08 实时全模态视频通话体验规约与符合性判定]
-|它把摄像头、麦克风、视觉现场、自然语音回应、打断、上下文和公共投影写成可审查的体验规约。
+|安全、隐私与运营负责人
+|xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#part-quality-governance[质量、治理与符合性声明]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#privacy-projection[隐私投影]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#tool-use-projection[工具调用投影]；xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#conformance-statement[符合性声明]
+|持续采集、外部能力、成本、失败、偏离和证据材料的公共约束。
 |===
 
-== 样本书
+== 判定入口
 
-* xref:books/00-book-anatomy/book.adoc[00 完整书籍结构标本]：覆盖 book 的前置、正文、分部和后置结构。
-* xref:books/01-starter-book/book.adoc[01 日常独立单书]：新增普通 book 的复制起点。
-* xref:books/02-multipart-monograph/book.adoc[02 长书分部]：同一本 book 内部的 part 结构。
-* xref:books/03-technical-book-workflow/book.adoc[03 技术书工作流]：图表、代码片段和资源边界。
-* xref:books/04-reference-manual/book.adoc[04 参考手册]：结构选择、路径规则和引用模式。
-* xref:books/05-upper-volume/book.adoc[05 上册]：独立分卷的上册。
-* xref:books/06-lower-volume/book.adoc[06 下册]：独立分卷的下册，并用示例说明跨卷引用写法。
-* xref:books/07-structured-writing-conventions/book.adoc[07 结构化书写约定标本]：标题、稳定 ID、role、xref、rel 和附加字段的结构化写法。
-* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc[08 实时全模态视频通话体验规约与符合性判定]：定义并判定实时全模态 AI 视频语音通话体验。
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#constitutive-conditions[构成性条件]：判断一个实现是否具备实时语音输入、当前视觉现场、同一会话、自然语音回应、可打断动态语义、会话内上下文连续和公共状态投影。
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#neighbor-objects[相邻对象]：区分语音助手、图片问答、视频会议系统、数字人对话系统和技术演示与本书对象的边界。
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#visual-reference-flow[视觉指代流]：判断用户说“这个”“那里”等视觉指代时，当前视觉现场是否进入会话解释。
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#interruption-flow[打断流]：判断用户在 AI 回应期间的新输入是否改变当前回答的会话命运。
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#error-projection[错误投影]：判断权限、网络、设备、模型和工具错误是否转化为用户可理解的能力限制和恢复路径。
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#assertion-surface[断言表面]：把体验承诺写成黑盒断言，检查用户动作和可观察结果。
+* xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#conformance-statement[符合性声明]：把实现范围、断言结果、条件限制、扩展能力、偏离项和证据材料放入同一份可审查声明。
+
+== 结构化书写参考
+
+* xref:books/07-structured-writing-conventions/book.adoc[07 结构化书写约定标本]：说明稳定标题、role、rel、附加字段和交叉引用如何形成可读、可维护、可被工具链识别的书稿表面。
+
+08 号主书在 xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc#appendix-structured-surface[结构化表面约定]中记录本书使用的 role 词表、rel 关系谓词和 `normative` 字段。
 
 == 工作区地图
 
-image::shared/images/workspace-map.svg[多书工作区结构]
-
-== 书籍边界速判
-
-* 只是同一本书内部的第一部、第二部：看 xref:books/02-multipart-monograph/book.adoc[02 长书分部]。
-* 上册需要独立入口和独立构建：看 xref:books/05-upper-volume/book.adoc[05 上册]。
-* 下册需要说明跨卷引用写法但不制造默认依赖：看 xref:books/06-lower-volume/book.adoc[06 下册]。
-* 新增一本普通书：从 xref:books/01-starter-book/book.adoc[01 日常独立单书] 开始。
-* 查路径、引用和增长规则：看 xref:books/04-reference-manual/book.adoc[04 参考手册]。
-* 写需要被读者和工具同时理解的结构化源文本：看 xref:books/07-structured-writing-conventions/book.adoc[07 结构化书写约定标本]。
-* 写可审查的实时全模态 AI 视频语音通话体验规约：看 xref:books/08-realtime-omnimodal-call-experience-spec/book.adoc[08 实时全模态视频通话体验规约与符合性判定]。
+image::shared/images/workspace-map.svg[书稿工作区结构]

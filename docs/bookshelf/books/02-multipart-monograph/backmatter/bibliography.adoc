@@ -1,3 +1,0 @@
-= 参考资料
-
-* [[[asciidoctor-parts]]] Asciidoctor Docs, Book Parts, https://docs.asciidoctor.org/asciidoc/latest/sections/parts/
