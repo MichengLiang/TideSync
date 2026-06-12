@@ -1,1 +1,1 @@
-本部把对象定义、动态体验和公共投影转化为黑盒断言。每条断言是可交叉引用的标题单位。断言检查用户动作和可观察结果，不检查内部模型、协议或代码结构。
+本部把xref:realtime-omnimodal-call-experience[对象定义]、xref:session-lifecycle[动态体验]和xref:user-visible-feedback[公共投影]转化为黑盒断言。xref:assertion-surface[断言表面]定义断言的标题化写法；xref:core-session-assertions[核心会话断言]、xref:permission-assertions[权限断言]、xref:visual-context-assertions[视觉上下文断言]、xref:interruption-assertions[打断断言]、xref:error-and-recovery-assertions[错误与恢复断言]和xref:nonconformance-cases[不符合案例]分别承接体验承诺。每条断言是可交叉引用的标题单位。断言检查用户动作和可观察结果，不检查内部模型、协议或代码结构。

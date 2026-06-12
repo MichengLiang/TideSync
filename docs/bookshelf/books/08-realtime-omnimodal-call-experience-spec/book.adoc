@@ -1,5 +1,5 @@
 = 实时全模态视频通话体验规约与符合性判定
-作者 <author@example.com>
+弥澄亮 <t103ooooo@stu.mju.edu.cn>
 v0.1, 2026-06
 :doctype: book
 :toc: left
@@ -26,6 +26,7 @@ include::frontmatter/preface.adoc[]
 [acknowledgments]
 include::frontmatter/acknowledgments.adoc[]
 
+[#part-object-boundary]
 = 对象、边界与符合性模型
 
 [partintro]
@@ -41,6 +42,7 @@ include::parts/100-object-boundary/040-system-boundary.adoc[]
 
 include::parts/100-object-boundary/050-conformance-model.adoc[]
 
+[#part-dynamic-experience]
 = 用户旅程与动态语义
 
 [partintro]
@@ -62,6 +64,7 @@ include::parts/200-dynamic-experience/070-modality-transition-flow.adoc[]
 
 include::parts/200-dynamic-experience/080-topic-and-context-flow.adoc[]
 
+[#part-public-projection]
 = 公共投影与可观察承诺
 
 [partintro]
@@ -79,6 +82,7 @@ include::parts/300-public-projection/050-privacy-projection.adoc[]
 
 include::parts/300-public-projection/060-tool-use-projection.adoc[]
 
+[#part-conformance-assertions]
 = 符合性断言与不符合案例
 
 [partintro]
@@ -100,6 +104,7 @@ include::parts/400-conformance-assertions/070-nonconformance-cases.adoc[]
 
 include::parts/400-conformance-assertions/080-coverage-map.adoc[]
 
+[#part-quality-governance]
 = 质量、治理与符合性声明
 
 [partintro]

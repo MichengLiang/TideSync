@@ -29,6 +29,19 @@
 
 覆盖对象:: xref:camera-permission[摄像头授权, rel=verifies]；xref:watching-state[正在看, rel=verifies]。
 
+[#capture-state-remains-visible.assertion, normative=must]
+=== 采集状态持续可见
+
+前置状态:: 用户已经授予麦克风、摄像头或屏幕共享权限；对应输入正在当前会话中被采集。
+
+用户动作:: 用户保持会话打开，并继续说话、展示画面或共享屏幕。
+
+期望结果:: 系统持续投影对应采集状态，使用户能够判断麦克风、摄像头或屏幕共享正在被当前会话使用。
+
+不符合表现:: 系统只在授权瞬间提示一次，采集期间没有持续状态；系统采集输入但界面无任何采集投影；系统状态与实际采集不一致。
+
+覆盖对象:: xref:capture-notice[采集提示, rel=verifies]；xref:feedback-consistency[反馈一致性, rel=verifies]。
+
 [#permission-denial-limits-session.assertion, normative=must]
 === 权限拒绝进入受限状态
 

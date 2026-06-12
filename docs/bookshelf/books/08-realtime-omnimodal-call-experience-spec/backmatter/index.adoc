@@ -1,3 +1,4 @@
+[#book-index]
 = 索引
 
 本索引 section 为书籍后置索引位置。正文中的稳定标题、术语表和交叉引用提供主要导航。
@@ -15,4 +16,12 @@
 * xref:interruption-flow[打断流]
 * xref:user-visible-feedback[用户可见反馈]
 * xref:assertion-surface[断言表面]
+* xref:core-session-assertions[核心会话断言]
+* xref:permission-assertions[权限断言]
+* xref:visual-context-assertions[视觉上下文断言]
+* xref:interruption-assertions[打断断言]
+* xref:error-and-recovery-assertions[错误与恢复断言]
 * xref:coverage-map[覆盖映射]
+* xref:conformance-statement[符合性声明]
+* xref:privacy-projection[隐私投影]
+* xref:tool-use-projection[工具调用投影]

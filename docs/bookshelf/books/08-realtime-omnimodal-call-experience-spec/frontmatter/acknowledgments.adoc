@@ -1,3 +1,4 @@
+[#book-acknowledgments]
 == 致谢
 
 本书的结构化写法参考本书架中的《结构化书写约定标本》。需求工程坐标参考 Pamela Zave 与 Michael Jackson 的 `Domain ∧ Specification ⊨ Requirements`。规范性语言参考 RFC 2119 与 RFC 8174。符合性判定效果参考 Java Community Process 中 Specification、Reference Implementation 与 Technology Compatibility Kit 的关系。黑盒场景表达参考 Gherkin 对前置条件、事件和可观察结果的区分。

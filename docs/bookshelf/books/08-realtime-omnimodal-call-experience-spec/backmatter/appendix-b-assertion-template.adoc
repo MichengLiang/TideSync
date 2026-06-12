@@ -1,3 +1,4 @@
+[#appendix-assertion-template]
 = 附录 B：断言模板
 
 断言使用标题承载稳定引用地址。模板如下。
@@ -15,7 +16,7 @@
 
 不符合表现:: 会导致断言失败的典型行为。
 
-覆盖对象:: xref:target-heading[目标标题, rel=verifies]。
+覆盖对象:: xref:camera-permission[摄像头授权, rel=verifies]。
 ----
 
 断言标题应表达行为判定，而不是内部实现。`normative` 字段使用 `must`、`should` 或 `may`。断言正文检查用户表面，不检查内部代码。

@@ -1,3 +1,4 @@
+[#book-bibliography]
 = 参考坐标
 
 * [[[zave-jackson-1997]]] Pamela Zave and Michael Jackson, “Four Dark Corners of Requirements Engineering”, ACM TOSEM, 1997.
@@ -8,3 +9,5 @@
 * [[[gherkin-reference]]] Cucumber Documentation, Gherkin Reference.
 * [[[openai-gpt4o]]] OpenAI, Hello GPT-4o.
 * [[[google-live-api]]] Google AI for Developers, Gemini Live API.
+* [[[bytedance-seed-voice]]] 字节跳动 Seed, 豆包实时语音大模型公开材料。
+* [[[stcn-doubao-video-call]]] 证券时报, 豆包视频通话相关公开报道。

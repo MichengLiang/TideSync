@@ -26,7 +26,7 @@
 |xref:user-speech-interrupts-response[用户语音打断 AI 回应]；xref:interrupted-output-not-completed[被打断回答不得补全]
 
 |公共状态投影
-|xref:session-entry-observable[会话入口可观察]；xref:permission-revocation-updates-state[权限撤回更新状态]；xref:recovery-state-consistent[恢复后状态一致]
+|xref:session-entry-observable[会话入口可观察]；xref:capture-state-remains-visible[采集状态持续可见]；xref:permission-revocation-updates-state[权限撤回更新状态]；xref:recovery-state-consistent[恢复后状态一致]
 
 |错误与隐私边界
 |xref:permission-error-actionable[权限错误提供可行动路径]；xref:network-error-not-disguised[网络错误不伪装成思考]；xref:hidden-capture-nonconformance[隐藏采集不符合体验契约]
@@ -37,7 +37,7 @@
 
 会话生命周期由 xref:session-entry-observable[会话入口可观察]、xref:conversation-remains-continuable[回应后会话可继续] 和 xref:session-end-stops-capture[会话结束停止采集] 覆盖。
 
-输入权限流由 xref:microphone-permission-visible[麦克风授权状态可见]、xref:camera-permission-visible[摄像头授权状态可见]、xref:permission-denial-limits-session[权限拒绝进入受限状态]、xref:permission-revocation-updates-state[权限撤回更新状态] 和 xref:permission-recovery-restores-capability[权限恢复重新投影能力] 覆盖。
+输入权限流由 xref:microphone-permission-visible[麦克风授权状态可见]、xref:camera-permission-visible[摄像头授权状态可见]、xref:capture-state-remains-visible[采集状态持续可见]、xref:permission-denial-limits-session[权限拒绝进入受限状态]、xref:permission-revocation-updates-state[权限撤回更新状态] 和 xref:permission-recovery-restores-capability[权限恢复重新投影能力] 覆盖。
 
 视觉指代流由 xref:current-visible-object-answerable[当前可见对象可被询问]、xref:visual-ambiguity-requests-clarification[多候选视觉对象触发澄清]、xref:visual-scene-change-updates-focus[视觉现场变化更新焦点]、xref:camera-off-visual-query-limited[摄像头关闭后的视觉问题受限] 和 xref:historical-visual-reference-bounded[历史视觉指代有边界] 覆盖。
 

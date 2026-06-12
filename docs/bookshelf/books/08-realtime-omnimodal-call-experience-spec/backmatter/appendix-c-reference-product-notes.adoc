@@ -1,11 +1,12 @@
+[#appendix-reference-product-notes]
 = 附录 C：参考产品公开事实
 
 参考产品提供经验坐标，不定义本书对象。核心定义来自本书的构成性条件和符合性断言。
 
-OpenAI ChatGPT 高级语音与 GPT-4o 公开展示了语音、视觉和实时回应的消费级方向。OpenAI Realtime API 文档也显示浏览器实时应用可以使用 WebRTC 接入实时模型。它们证明该体验方向已经进入主流产品与开发者 API 语境。
+OpenAI ChatGPT 高级语音与 GPT-4o 公开展示了语音、视觉和实时回应的消费级方向。OpenAI Realtime API 文档也显示浏览器实时应用可以使用 WebRTC 接入实时模型。它们证明该体验方向已经进入主流产品与开发者 API 语境。参见 <<openai-gpt4o>>。
 
-Google Gemini Live 与 Project Astra 公开展示了实时、多模态、上下文感知助手方向。Gemini Live API 文档把低延迟语音和视频交互作为开发者能力描述。
+Google Gemini Live 与 Project Astra 公开展示了实时、多模态、上下文感知助手方向。Gemini Live API 文档把低延迟语音和视频交互作为开发者能力描述。参见 <<google-live-api>>。
 
-豆包视频通话在公开报道和用户表面中提供了国内消费级 AI 视频语音对话参考。其内部实现不作为本书事实来源；用户可观察体验只作为对象定义的背景坐标。
+豆包视频通话在公开报道和用户表面中提供了国内消费级 AI 视频语音对话参考。其内部实现不作为本书事实来源；用户可观察体验只作为对象定义的背景坐标。参见 <<bytedance-seed-voice>> 与 <<stcn-doubao-video-call>>。
 
 参考产品名不进入核心断言。一个实现是否符合本书，只看本书定义的对象、公共契约和黑盒断言。
