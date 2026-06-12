@@ -1,0 +1,67 @@
+{
+	"name": "tidesync",
+	"version": "0.0.0",
+	"description": "A TypeScript CLI workspace for TideSync.",
+	"license": "Apache-2.0",
+	"author": {
+		"name": "弥澄亮",
+		"email": "t103ooooo@stu.mju.edu.cn",
+		"url": "https://github.com/MichengLiang"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+ssh://git@github.com:MichengLiang/TideSync.git"
+	},
+	"bugs": {
+		"url": "https://github.com/MichengLiang/TideSync/issues"
+	},
+	"homepage": "https://github.com/MichengLiang/TideSync#readme",
+	"type": "module",
+	"packageManager": "pnpm@10.33.0",
+	"engines": {
+		"node": ">=24.0.0",
+		"pnpm": ">=10.0.0"
+	},
+	"types": "./dist/index.d.mts",
+	"bin": {
+		"tidesync": "./dist/bin.mjs"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE",
+		"NOTICE"
+	],
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsx src/bin.ts",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"pack:check": "pnpm build && publint && attw --pack . --profile esm-only --ignore-rules cjs-resolves-to-esm --no-emoji --no-color",
+		"smoke": "tsx src/bin.ts --help",
+		"clean": "rm -rf dist coverage"
+	},
+	"dependencies": {
+		"commander": "15.0.0"
+	},
+	"devDependencies": {
+		"@arethetypeswrong/cli": "0.18.3",
+		"@biomejs/biome": "2.5.0",
+		"@types/node": "24.13.2",
+		"publint": "0.3.21",
+		"tsdown": "0.21.10",
+		"tsx": "4.22.4",
+		"typescript": "6.0.3",
+		"vitest": "4.1.8"
+	}
+}
