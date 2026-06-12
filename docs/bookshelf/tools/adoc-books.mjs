@@ -11,6 +11,7 @@ const ANCHOR_PATTERN = /^\[#([A-Za-z0-9_-]+)(?:[.,][^\]]*)?\]$/gm;
 const LOCAL_TARGET_PATTERN = /\b(?:href|src)="([^"]+)"/g;
 const SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
 const HOME_MARKER = "data-multi-book-home";
+const CONTROLS_MARKER = "data-multi-book-controls";
 const FETCH_DIAGRAMS_ENV = "ADOC_BOOKS_FETCH_DIAGRAMS";
 const CONFIG_FILE = "adoc-books.config.mjs";
 const DEFAULT_CONFIG = {
@@ -208,29 +209,35 @@ function escapeHtmlAttribute(value) {
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
 }
-function addHomeLinkToBookHtml(html, href, homeLink) {
-    if (html.includes(HOME_MARKER))
+function escapeJsonScript(value) {
+    return JSON.stringify(value)
+        .replaceAll("<", "\\u003c")
+        .replaceAll("\u2028", "\\u2028")
+        .replaceAll("\u2029", "\\u2029");
+}
+function addBookControlsToBookHtml(html, href, homeLink, bookSource) {
+    if (html.includes(CONTROLS_MARKER))
         return html;
     const marker = '<div id="toc" class="toc2">';
     const index = html.indexOf(marker);
     if (index === -1)
         throw new Error("book HTML is missing the left TOC container");
     const insertAt = index + marker.length;
-    const homeBlock = `
+    const controlsBlock = `
 <style>
-.multi-book-home {
+.multi-book-controls {
   margin: 0 0 1rem;
   padding-bottom: .75rem;
   border-bottom: 1px solid #e5e7eb;
 }
-.multi-book-home a {
+.multi-book-home {
   color: #1f2937;
   display: block;
   font-weight: 600;
   line-height: 1.35;
   text-decoration: none;
 }
-.multi-book-home a:hover {
+.multi-book-home:hover {
   color: #0f766e;
   text-decoration: underline;
 }
@@ -241,11 +248,92 @@ function addHomeLinkToBookHtml(html, href, homeLink) {
   font-weight: 400;
   margin-top: .15rem;
 }
+.multi-book-copy-source {
+  appearance: none;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #1f2937;
+  cursor: pointer;
+  display: block;
+  font-size: .82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-top: .75rem;
+  padding: .42rem .5rem;
+  text-align: center;
+  width: 100%;
+}
+.multi-book-copy-source:hover,
+.multi-book-copy-source:focus {
+  border-color: #0f766e;
+  color: #0f766e;
+}
+.multi-book-copy-status {
+  color: #64748b;
+  display: block;
+  font-size: .75rem;
+  line-height: 1.35;
+  margin-top: .4rem;
+  min-height: 1em;
+}
 </style>
-<div class="multi-book-home" ${HOME_MARKER}>
-  <a href="${escapeHtmlAttribute(href)}">${escapeHtmlAttribute(homeLink.label)}<span>${escapeHtmlAttribute(homeLink.subtitle)}</span></a>
-</div>`;
-    return `${html.slice(0, insertAt)}${homeBlock}${html.slice(insertAt)}`;
+<div class="multi-book-controls" ${CONTROLS_MARKER}>
+  <a class="multi-book-home" ${HOME_MARKER} href="${escapeHtmlAttribute(href)}">${escapeHtmlAttribute(homeLink.label)}<span>${escapeHtmlAttribute(homeLink.subtitle)}</span></a>
+  <button type="button" class="multi-book-copy-source" data-multi-book-source-copy>复制本书为纯文本</button>
+  <span class="multi-book-copy-status" data-multi-book-source-status aria-live="polite"></span>
+</div>
+<script type="application/json" id="multi-book-source-data">${escapeJsonScript(bookSource)}</script>
+<script>
+(function () {
+  var sourceElement = document.getElementById("multi-book-source-data");
+  var button = document.querySelector("[data-multi-book-source-copy]");
+  var status = document.querySelector("[data-multi-book-source-status]");
+  if (!sourceElement || !button) return;
+
+  var source = "";
+  var fallbackMode = false;
+  try {
+    source = JSON.parse(sourceElement.textContent || '""');
+  } catch (error) {
+    if (status) status.textContent = "纯文本数据读取失败";
+    button.disabled = true;
+    return;
+  }
+
+  function setStatus(message) {
+    if (status) status.textContent = message;
+  }
+
+  function openSourcePage() {
+    var blob = new Blob([source], { type: "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener");
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    setStatus("已尝试打开纯文本页；如果没有出现，请允许弹出窗口后再试");
+  }
+
+  button.addEventListener("click", async function () {
+    if (fallbackMode) {
+      openSourcePage();
+      return;
+    }
+
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(source);
+      button.textContent = "已复制";
+      setStatus("");
+      setTimeout(function () { button.textContent = "复制本书为纯文本"; }, 1800);
+    } catch (error) {
+      fallbackMode = true;
+      button.textContent = "打开纯文本页";
+      openSourcePage();
+    }
+  });
+}());
+</script>`;
+    return `${html.slice(0, insertAt)}${controlsBlock}${html.slice(insertAt)}`;
 }
 async function addHomeLinks(rootDir, books, homeLink) {
     const catalog = path.join(rootDir, "build", "html", "catalog.html");
@@ -253,7 +341,8 @@ async function addHomeLinks(rootDir, books, homeLink) {
         const htmlFile = path.join(book.htmlOutputDir, "book.html");
         const html = await readFile(htmlFile, "utf8");
         const href = path.relative(path.dirname(htmlFile), catalog);
-        await writeFile(htmlFile, addHomeLinkToBookHtml(html, href, homeLink), "utf8");
+        const source = await readFile(path.join(rootDir, "build", "adoc", "books", `${book.bookId}.adoc`), "utf8");
+        await writeFile(htmlFile, addBookControlsToBookHtml(html, href, homeLink, source), "utf8");
     }
 }
 async function writeRootIndex(rootDir, rootIndex) {
