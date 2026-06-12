@@ -1,0 +1,32 @@
+[#inline-structure-map]
+== 内联结构标记
+
+内联结构标记用于给正文中的术语、路径、引用目标和索引入口提供稳定身份。它不改变 book 的章节层级，但会提高正文片段的可维护性和可检索性。
+
+[cols="1,2", options="header"]
+|===
+|写法 |结构作用
+
+|`[#stable-anchor]`
+|声明稳定引用目标。
+
+|`xref:#body-map[正文结构地图]`
+|引用同一文档内的稳定目标。
+
+|`indexterm2:[term]`
+|把正文中已经出现的词作为可见索引词。
+
+|`indexterm:[term, detail]`
+|正文没有出现该词时，补充隐藏索引入口。
+
+|`[.term]#inline role#`
+|给术语片段提供语义身份。
+
+|`[.path]` + monospace path
+|给路径文本提供语义身份。
+
+|`{series-name}`
+|引用共享属性，减少多处重复文本。
+|===
+
+语义 inline role 提供结构身份；具体视觉效果取决于输出样式。本书使用 [.term]#inline role# 标记术语片段，使用 [.path]`parts/02-body-structure/` 标记路径片段。

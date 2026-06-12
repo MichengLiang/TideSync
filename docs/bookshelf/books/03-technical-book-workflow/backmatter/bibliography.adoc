@@ -1,0 +1,3 @@
+== 参考资料
+
+* [[[asciidoctor-include]]] Asciidoctor Docs, Include Directive, https://docs.asciidoctor.org/asciidoc/latest/directives/include/

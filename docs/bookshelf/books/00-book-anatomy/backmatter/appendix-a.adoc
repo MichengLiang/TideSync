@@ -1,0 +1,29 @@
+= 附录 A：结构速查
+
+[cols="1,2", options="header"]
+|===
+|写法 |含义
+
+|`= 书名`
+|Document title（文档标题）。在 book 文档类型中作为整本书标题。
+
+|`= 部标题`
+|Document title 之后的 Level 0 Section。在 book 文档类型中可作为 Part（部）。
+
+|`== 章`
+|Level 1 Section（一级章节）。在 book 文档类型中通常作为 Chapter（章）。
+
+|`=== 节`
+|Level 2 Section（二级章节 / 节）。
+
+|`==== 小节`
+|Level 3 Section（三级章节 / 小节）。
+
+|`===== 次小节`
+|Level 4 Section（四级章节）。
+
+|`====== 最底层级`
+|Level 5 Section（五级章节）。AsciiDoc 支持的最深层级。
+|===
+
+`[appendix]`、`[glossary]`、`[bibliography]` 和 `[index]` 是 section style。它们改变紧随其后 section 的语义；标题层级仍由 `=` 数量决定。

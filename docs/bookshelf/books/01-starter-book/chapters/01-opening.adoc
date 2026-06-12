@@ -1,0 +1,6 @@
+[#starter-book-boundary]
+== 单书边界
+
+一本普通书由自己的 `book.adoc` 定义边界。入口文件负责书名、属性、章节顺序、前置内容和后置内容。
+
+image::assets/images/starter-map.svg[日常单书结构图]

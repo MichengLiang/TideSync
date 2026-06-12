@@ -1,0 +1,19 @@
+== 图表块
+
+图表块让技术书把结构图保留为可维护文本。
+
+.Mermaid：技术书资源边界
+[mermaid,technical-resource-flow,svg]
+....
+flowchart LR
+    book["book.adoc"]
+    chapter["chapters/*.adoc"]
+    examples["examples/minimal-tool.mjs"]
+    assets["assets/images"]
+    shared["../../shared/images"]
+
+    book --> chapter
+    chapter --> examples
+    chapter --> assets
+    chapter --> shared
+....

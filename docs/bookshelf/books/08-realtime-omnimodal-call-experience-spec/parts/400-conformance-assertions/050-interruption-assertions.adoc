@@ -1,0 +1,69 @@
+[#interruption-assertions.assertion]
+== 打断断言
+
+打断断言验证用户是否能在 AI 回应期间重新取得交互控制权。它们检查旧回答是否停止、新输入是否成为焦点、状态是否一致。
+
+[#user-speech-interrupts-response.assertion, normative=must]
+=== 用户语音打断 AI 回应
+
+前置状态:: AI 正在以语音回应；麦克风可用。
+
+用户动作:: 用户说“停一下”或提出新的问题。
+
+期望结果:: AI 当前回答停止或失去会话支配地位；系统转向用户新输入，进入正在听、正在处理或新的回应状态。
+
+不符合表现:: AI 继续完整播放旧回答；用户新输入被忽略；旧回答结束后才处理新输入且无任何打断反馈。
+
+覆盖对象:: xref:interruption-trigger[打断触发, rel=verifies]；xref:output-cancellation[输出停止, rel=verifies]。
+
+[#correction-interrupts-wrong-focus.assertion, normative=must]
+=== 纠正打断错误焦点
+
+前置状态:: AI 正在围绕错误视觉对象回应。
+
+用户动作:: 用户说“不是这个，是左边那个”或等价纠正。
+
+期望结果:: 系统停止旧焦点回答，转向被纠正的视觉对象，或请求用户澄清。
+
+不符合表现:: 系统继续旧对象回答；系统承认纠正但仍回答旧问题；系统忽略用户纠正。
+
+覆盖对象:: xref:correction-flow[纠正, rel=verifies]；xref:conversation-redirection[会话重定向, rel=verifies]。
+
+[#visual-change-interrupts-response.assertion, normative=should]
+=== 视觉切换可中断旧回答
+
+前置状态:: AI 正在回答当前画面对象；摄像头开启。
+
+用户动作:: 用户移动摄像头到新对象并说“看这个”。
+
+期望结果:: 系统停止或重定向旧回答，把新视觉现场作为当前焦点，或说明新画面不足以判断。
+
+不符合表现:: 系统继续完整解释旧画面；系统把新对象问题排到不可见队列；系统混合旧画面和新画面给出不一致回答。
+
+覆盖对象:: xref:interruption-and-visual-context[打断与视觉上下文, rel=verifies]；xref:visual-scene-change-updates-focus[视觉现场变化更新焦点, rel=verifies]。
+
+[#interrupted-output-not-completed.assertion, normative=must]
+=== 被打断回答不得补全
+
+前置状态:: AI 回答被用户有效打断。
+
+用户动作:: 用户等待系统处理新输入。
+
+期望结果:: 被打断回答不继续作为完整回答输出；系统的随后行为围绕新输入、澄清或受限状态。
+
+不符合表现:: 系统停止片刻后继续旧回答；字幕继续补全被打断内容；系统把未输出的旧回答当成用户已经接收的信息。
+
+覆盖对象:: xref:interrupted-state[已被打断, rel=verifies]；xref:speech-stop[语音停止, rel=verifies]。
+
+[#interruption-feedback-observable.assertion, normative=should]
+=== 打断反馈可观察
+
+前置状态:: AI 正在回应。
+
+用户动作:: 用户触发有效打断。
+
+期望结果:: 用户能够通过语音停止、状态变化、新回答开始、字幕停止或其他投影观察到打断生效。
+
+不符合表现:: 用户无法判断系统是否听见打断；旧状态和新声音冲突；系统无反馈地沉默。
+
+覆盖对象:: xref:interruption-feedback[打断反馈, rel=verifies]；xref:user-visible-feedback[用户可见反馈, rel=verifies]。

@@ -1,0 +1,4 @@
+== 参考资料
+
+* [[[asciidoctor-xref]]] Asciidoctor Docs, Document to Document Cross References, https://docs.asciidoctor.org/asciidoc/latest/macros/inter-document-xref/
+* [[[antora-xref]]] Antora Docs, Page Xrefs and Resource IDs, https://docs.antora.org/antora/latest/page/xref/

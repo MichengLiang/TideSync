@@ -1,0 +1,5 @@
+== 分部结构的验证
+
+验证长书分部时，重点检查 `book.adoc` 中是否存在多个 level 0 part，以及每个 part 下是否有 chapter。
+
+分卷发布可以参考样本 `05-upper-volume` 和 `06-lower-volume` 的目录组织。

@@ -1,0 +1,69 @@
+[#error-and-recovery-assertions.assertion]
+== 错误与恢复断言
+
+错误与恢复断言验证系统是否在失败时保持诚实、可理解和可恢复。失败本身不必然导致不符合；沉默失败、伪装成功和错误状态冲突导致不符合。
+
+[#permission-error-actionable.assertion, normative=must]
+=== 权限错误提供可行动路径
+
+前置状态:: 系统需要麦克风或视觉输入权限。
+
+用户动作:: 用户拒绝权限，或宿主系统阻止授权。
+
+期望结果:: 系统说明受影响能力，并提供重新授权、继续受限模式或结束会话的路径。
+
+不符合表现:: 系统只显示通用错误；系统无状态变化；系统继续投影相关能力可用。
+
+覆盖对象:: xref:permission-error-projection[权限错误, rel=verifies]；xref:permission-denial-limits-session[权限拒绝进入受限状态, rel=verifies]。
+
+[#network-error-not-disguised.assertion, normative=must]
+=== 网络错误不伪装成思考
+
+前置状态:: 用户已提出问题；系统已检测到网络异常或服务连接异常。
+
+用户动作:: 用户等待回应。
+
+期望结果:: 系统投影网络或连接限制，并说明等待、重试、重连或结束路径。
+
+不符合表现:: 系统长期沉默且无状态；系统持续显示正在思考但实际连接失败；系统在连接失败时给出伪结果。
+
+覆盖对象:: xref:network-error-projection[网络错误, rel=verifies]。
+
+[#visual-uncertainty-honest.assertion, normative=must]
+=== 视觉不确定性被诚实表达
+
+前置状态:: 视觉输入可用，但画面模糊、遮挡、过暗、对象不清或多对象歧义。
+
+用户动作:: 用户提出依赖画面的视觉问题。
+
+期望结果:: 系统说明无法可靠判断、请求调整画面或请求澄清。
+
+不符合表现:: 系统在看不清时作确定回答；系统编造画面内容；系统忽略视觉限制给出通用答案。
+
+覆盖对象:: xref:visual-ambiguity[视觉歧义, rel=verifies]；xref:visual-scene-facts[视觉现场事实, rel=verifies]。
+
+[#tool-failure-disclosed.assertion, normative=should]
+=== 工具失败被说明
+
+前置状态:: 用户请求需要外部搜索、位置、业务 API 或知识库结果。
+
+用户动作:: 用户提出相关请求，工具调用失败或不可用。
+
+期望结果:: 系统说明外部工具不可用或结果无法获取，并避免把缺失结果当作事实。
+
+不符合表现:: 系统伪造工具结果；系统把工具失败隐藏在确定回答中；系统执行外部动作失败却声称已完成。
+
+覆盖对象:: xref:tool-error-projection[工具错误, rel=verifies]；xref:tool-result[工具结果, rel=verifies]。
+
+[#recovery-state-consistent.assertion, normative=should]
+=== 恢复后状态一致
+
+前置状态:: 会话处于错误或受限状态。
+
+用户动作:: 用户完成恢复动作，例如重新授权、切换设备、调整画面或等待重连成功。
+
+期望结果:: 系统更新状态投影，并只恢复实际可用的能力。
+
+不符合表现:: 恢复后状态不变化；系统显示能力恢复但仍不可用；系统恢复一项能力却声称全部能力恢复。
+
+覆盖对象:: xref:error-recovery[错误恢复, rel=verifies]；xref:state-consistency[状态一致性, rel=verifies]。

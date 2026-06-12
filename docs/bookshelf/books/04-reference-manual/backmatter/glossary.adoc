@@ -1,0 +1,8 @@
+== 术语表
+
+book:: 具有独立 `book.adoc` 和构建产物的书籍单位。
+part:: 同一本 book 内部的 level 0 大分部。
+catalog:: 多书工作区的读者导航入口。
+shared resource:: 被 catalog 或多本书共同引用的资源。
+explicit anchor:: 使用 `[#id]` 写出的稳定引用目标。
+contract check:: 对工作区源文件约定进行静态检查的脚本行为。

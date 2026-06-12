@@ -1,0 +1,56 @@
+= 完整书籍结构标本
+作者 <author@example.com>
+v0.1, 2026-05
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:experimental:
+:idprefix:
+:idseparator: -
+
+include::../../shared/attributes.adoc[]
+
+[abstract]
+include::frontmatter/abstract.adoc[]
+
+[colophon]
+include::frontmatter/colophon.adoc[]
+
+[dedication]
+include::frontmatter/dedication.adoc[]
+
+[preface]
+include::frontmatter/preface.adoc[]
+
+[acknowledgments]
+include::frontmatter/acknowledgments.adoc[]
+
+= 第一部：前置结构
+
+[partintro]
+include::parts/01-front-structure/_partintro.adoc[]
+
+include::parts/01-front-structure/01-frontmatter-map.adoc[]
+
+= 第二部：正文结构
+
+[partintro]
+include::parts/02-body-structure/_partintro.adoc[]
+
+include::parts/02-body-structure/01-body-map.adoc[]
+
+include::parts/02-body-structure/02-inline-structure.adoc[]
+
+[appendix]
+include::backmatter/appendix-a.adoc[]
+
+[glossary]
+include::backmatter/glossary.adoc[]
+
+[bibliography]
+include::backmatter/bibliography.adoc[]
+
+[index]
+include::backmatter/index.adoc[]

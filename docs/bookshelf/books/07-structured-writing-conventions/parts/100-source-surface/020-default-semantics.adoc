@@ -1,0 +1,26 @@
+[#heading-and-xref]
+== 标题与引用
+
+等号行是标题。标题前一行的 attrlist 承载地址和 role。
+
+[source,asciidoc]
+----
+[#stable-heading.concept]
+== 稳定标题
+----
+
+`#stable-heading` 给标题一个稳定地址；`.concept` 标明标题身份；`稳定标题` 是读者看到的标题文本。
+
+[source,asciidoc]
+----
+引用规则参见 xref:stable-heading[稳定标题]。
+----
+
+这条 xref 表示参见目标标题。投影时，这条引用使用默认谓词 `aat:references`。
+
+[source,asciidoc]
+----
+引用规则依赖 xref:stable-heading[稳定标题, rel=depends-on]。
+----
+
+写入 `rel=depends-on` 时，作者声明当前标题到目标标题的依赖关系。投影时，这条关系使用 `rel:depends-on`。

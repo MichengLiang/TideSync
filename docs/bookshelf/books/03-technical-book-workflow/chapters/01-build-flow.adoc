@@ -1,0 +1,12 @@
+[#technical-build-flow]
+== 构建流程
+
+技术书仍然是一本文档边界独立的 book。它可以使用共享属性和共享图片，但自己的示例代码保留在书内。
+
+共享工作区图来自 `shared/images/`：
+
+image::../../shared/images/workspace-map.svg[工作区共享结构图]
+
+本书自己的流程图来自书内资源：
+
+image::assets/images/technical-flow.svg[技术书流程图]

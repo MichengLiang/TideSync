@@ -1,0 +1,25 @@
+= 技术书工作流
+作者 <author@example.com>
+v0.1, 2026-05
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:experimental:
+:idprefix:
+:idseparator: -
+
+include::../../shared/attributes.adoc[]
+
+[preface]
+include::frontmatter/preface.adoc[]
+
+include::chapters/01-build-flow.adoc[]
+
+include::chapters/02-diagrams.adoc[]
+
+include::chapters/03-code-includes.adoc[]
+
+[bibliography]
+include::backmatter/bibliography.adoc[]

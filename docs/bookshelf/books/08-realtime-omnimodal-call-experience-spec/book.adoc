@@ -1,0 +1,136 @@
+= 实时全模态视频通话体验规约与符合性判定
+作者 <author@example.com>
+v0.1, 2026-06
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:partnums:
+:part-signifier: Part
+:icons: font
+:experimental:
+:idprefix:
+:idseparator: -
+
+include::../../shared/attributes.adoc[]
+
+[abstract]
+include::frontmatter/abstract.adoc[]
+
+[colophon]
+include::frontmatter/colophon.adoc[]
+
+[preface]
+include::frontmatter/preface.adoc[]
+
+[acknowledgments]
+include::frontmatter/acknowledgments.adoc[]
+
+= 对象、边界与符合性模型
+
+[partintro]
+include::parts/100-object-boundary/_partintro.adoc[]
+
+include::parts/100-object-boundary/010-artifact-identity.adoc[]
+
+include::parts/100-object-boundary/020-domain-assumptions.adoc[]
+
+include::parts/100-object-boundary/030-stakeholder-goals.adoc[]
+
+include::parts/100-object-boundary/040-system-boundary.adoc[]
+
+include::parts/100-object-boundary/050-conformance-model.adoc[]
+
+= 用户旅程与动态语义
+
+[partintro]
+include::parts/200-dynamic-experience/_partintro.adoc[]
+
+include::parts/200-dynamic-experience/010-session-lifecycle.adoc[]
+
+include::parts/200-dynamic-experience/020-observable-state-model.adoc[]
+
+include::parts/200-dynamic-experience/030-input-permission-flow.adoc[]
+
+include::parts/200-dynamic-experience/040-basic-conversation-flow.adoc[]
+
+include::parts/200-dynamic-experience/050-visual-reference-flow.adoc[]
+
+include::parts/200-dynamic-experience/060-interruption-flow.adoc[]
+
+include::parts/200-dynamic-experience/070-modality-transition-flow.adoc[]
+
+include::parts/200-dynamic-experience/080-topic-and-context-flow.adoc[]
+
+= 公共投影与可观察承诺
+
+[partintro]
+include::parts/300-public-projection/_partintro.adoc[]
+
+include::parts/300-public-projection/010-user-visible-feedback.adoc[]
+
+include::parts/300-public-projection/020-speech-output-contract.adoc[]
+
+include::parts/300-public-projection/030-transcript-and-caption-contract.adoc[]
+
+include::parts/300-public-projection/040-error-projection.adoc[]
+
+include::parts/300-public-projection/050-privacy-projection.adoc[]
+
+include::parts/300-public-projection/060-tool-use-projection.adoc[]
+
+= 符合性断言与不符合案例
+
+[partintro]
+include::parts/400-conformance-assertions/_partintro.adoc[]
+
+include::parts/400-conformance-assertions/010-assertion-surface.adoc[]
+
+include::parts/400-conformance-assertions/020-core-session-assertions.adoc[]
+
+include::parts/400-conformance-assertions/030-permission-assertions.adoc[]
+
+include::parts/400-conformance-assertions/040-visual-context-assertions.adoc[]
+
+include::parts/400-conformance-assertions/050-interruption-assertions.adoc[]
+
+include::parts/400-conformance-assertions/060-error-and-recovery-assertions.adoc[]
+
+include::parts/400-conformance-assertions/070-nonconformance-cases.adoc[]
+
+include::parts/400-conformance-assertions/080-coverage-map.adoc[]
+
+= 质量、治理与符合性声明
+
+[partintro]
+include::parts/500-quality-governance/_partintro.adoc[]
+
+include::parts/500-quality-governance/010-latency-and-responsiveness.adoc[]
+
+include::parts/500-quality-governance/020-continuity-and-memory-boundary.adoc[]
+
+include::parts/500-quality-governance/030-cost-and-resource-boundary.adoc[]
+
+include::parts/500-quality-governance/040-safety-and-privacy-boundary.adoc[]
+
+include::parts/500-quality-governance/050-accessibility-and-environment.adoc[]
+
+include::parts/500-quality-governance/060-conformance-statement.adoc[]
+
+[appendix]
+include::backmatter/appendix-a-conformance-checklist.adoc[]
+
+[appendix]
+include::backmatter/appendix-b-assertion-template.adoc[]
+
+[appendix]
+include::backmatter/appendix-c-reference-product-notes.adoc[]
+
+[glossary]
+include::backmatter/glossary.adoc[]
+
+[bibliography]
+include::backmatter/bibliography.adoc[]
+
+[index]
+include::backmatter/index.adoc[]

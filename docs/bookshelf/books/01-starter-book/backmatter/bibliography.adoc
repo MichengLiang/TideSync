@@ -1,0 +1,3 @@
+== 参考资料
+
+* [[[starter-anatomy]]] 样本 `00-book-anatomy` 展示完整 book 结构位置。

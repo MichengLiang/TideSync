@@ -1,0 +1,53 @@
+[#coverage-map.contract]
+== 覆盖映射
+
+覆盖映射说明本书断言如何覆盖构成性条件。它不是测试执行结果，而是书内判定结构的导航。
+
+[#coverage-core-conditions.contract]
+=== 构成性条件覆盖
+
+[cols="1,2", options="header"]
+|===
+|构成性条件 |覆盖断言
+
+|实时语音输入
+|xref:speech-input-accepted[用户语音输入被接收]；xref:microphone-permission-visible[麦克风授权状态可见]
+
+|当前视觉现场
+|xref:visual-input-participates[当前视觉现场参与回答]；xref:camera-permission-visible[摄像头授权状态可见]；xref:current-visible-object-answerable[当前可见对象可被询问]
+
+|同一会话上下文
+|xref:conversation-remains-continuable[回应后会话可继续]；xref:historical-visual-reference-bounded[历史视觉指代有边界]
+
+|自然语音回应
+|xref:speech-response-audible[AI 自然语音回应可听]
+
+|可打断动态语义
+|xref:user-speech-interrupts-response[用户语音打断 AI 回应]；xref:interrupted-output-not-completed[被打断回答不得补全]
+
+|公共状态投影
+|xref:session-entry-observable[会话入口可观察]；xref:permission-revocation-updates-state[权限撤回更新状态]；xref:recovery-state-consistent[恢复后状态一致]
+
+|错误与隐私边界
+|xref:permission-error-actionable[权限错误提供可行动路径]；xref:network-error-not-disguised[网络错误不伪装成思考]；xref:hidden-capture-nonconformance[隐藏采集不符合体验契约]
+|===
+
+[#coverage-flow-map.contract]
+=== 体验流覆盖
+
+会话生命周期由 xref:session-entry-observable[会话入口可观察]、xref:conversation-remains-continuable[回应后会话可继续] 和 xref:session-end-stops-capture[会话结束停止采集] 覆盖。
+
+输入权限流由 xref:microphone-permission-visible[麦克风授权状态可见]、xref:camera-permission-visible[摄像头授权状态可见]、xref:permission-denial-limits-session[权限拒绝进入受限状态]、xref:permission-revocation-updates-state[权限撤回更新状态] 和 xref:permission-recovery-restores-capability[权限恢复重新投影能力] 覆盖。
+
+视觉指代流由 xref:current-visible-object-answerable[当前可见对象可被询问]、xref:visual-ambiguity-requests-clarification[多候选视觉对象触发澄清]、xref:visual-scene-change-updates-focus[视觉现场变化更新焦点]、xref:camera-off-visual-query-limited[摄像头关闭后的视觉问题受限] 和 xref:historical-visual-reference-bounded[历史视觉指代有边界] 覆盖。
+
+打断流由 xref:user-speech-interrupts-response[用户语音打断 AI 回应]、xref:correction-interrupts-wrong-focus[纠正打断错误焦点]、xref:visual-change-interrupts-response[视觉切换可中断旧回答]、xref:interrupted-output-not-completed[被打断回答不得补全] 和 xref:interruption-feedback-observable[打断反馈可观察] 覆盖。
+
+错误与恢复由 xref:permission-error-actionable[权限错误提供可行动路径]、xref:network-error-not-disguised[网络错误不伪装成思考]、xref:visual-uncertainty-honest[视觉不确定性被诚实表达]、xref:tool-failure-disclosed[工具失败被说明] 和 xref:recovery-state-consistent[恢复后状态一致] 覆盖。
+
+[#coverage-limits.contract]
+=== 覆盖边界
+
+本覆盖映射覆盖核心体验。扩展能力需要额外断言。屏幕共享、长期记忆、多人会话、数字人形象、业务工具动作和录制回放只有在实现声明扩展符合时，才需要进入扩展覆盖。
+
+覆盖映射不替代测试执行。它说明书内断言与对象条件的关系。具体实现需要提交证据，说明这些断言在声明范围内如何通过。

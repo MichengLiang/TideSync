@@ -1,0 +1,62 @@
+= 附录 A：结构化写法速查
+
+[cols="1,2", options="header"]
+|===
+|写法 |含义
+
+|`= 书名`
+|Document title（文档标题）。在 book 文档类型中作为整本书标题。
+
+|`= 部标题`
+|Document title 之后的 Level 0 Section。在 book 文档类型中可作为 Part（部）。
+
+|`== 章 / 标题`
+|Level 1 Section（一级章节）。创建书稿阅读结构，在 book 文档类型中通常作为 Chapter（章）。
+
+|`=== 节`
+|Level 2 Section（二级章节 / 节）。
+
+|`==== 小节`
+|Level 3 Section（三级章节 / 小节）。
+
+|`===== 次小节`
+|Level 4 Section（四级章节）。
+
+|`====== 最底层级`
+|Level 5 Section（五级章节）。AsciiDoc 支持的最深层级。
+
+|`parts/100-topic/`
+|part 目录的源文件编排号。
+
+|`010-opening.adoc`
+|chapter 文件的源文件编排号。
+
+|`[#stable-id]`
+|为重要标题声明稳定 ID。
+
+|`[#stable-id.concept]`
+|声明稳定 ID，并用 role 标明标题身份。
+
+|`[#example.example, owner=writing-team]`
+|role 声明标题身份；named attributes 保留附加字段。
+
+|`xref:stable-id[显示文本]`
+|显示为链接，投影为 references。
+
+|`xref:stable-id[显示文本, rel=depends-on]`
+|显示为链接，同时声明 depends-on 关系。
+
+|`indexterm2:[role]`
+|正文可见索引词。
+
+|`indexterm:[relation predicate]`
+|正文隐藏索引词。
+|===
+
+role 描述标题身份。rel 描述 xref 边上的关系谓词。named attributes 是附加字段。
+
+`[appendix]`、`[glossary]`、`[bibliography]` 和 `[index]` 是 section style。它们改变紧随其后 section 的语义；标题层级仍由 `=` 数量决定。
+
+对于跨文件的交叉引用，为了避免重复编写相对路径，你可以在文档的头部（Header）定义一个文档属性（Document Attribute）来存储这个基础路径。
+
+你可以在主文档的开头定义一个变量（比如 `:book-b-dir:`），后续引用时通过 `{book-b-dir}` 来调用它。

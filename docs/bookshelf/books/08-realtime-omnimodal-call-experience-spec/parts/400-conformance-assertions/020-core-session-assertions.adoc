@@ -1,0 +1,82 @@
+[#core-session-assertions.assertion]
+== 核心会话断言
+
+核心会话断言验证体验对象的主路径：用户进入会话、授权输入、提出语音和视觉问题、听到自然语音回应、继续交互并结束会话。
+
+[#session-entry-observable.assertion, normative=must]
+=== 会话入口可观察
+
+前置状态:: 用户处于未进入会话状态。
+
+用户动作:: 用户执行进入实时全模态视频通话体验的动作。
+
+期望结果:: 系统进入等待授权或准备状态，并让用户知道当前尚未采集麦克风和视觉输入。
+
+不符合表现:: 系统在没有用户明确进入动作时开始采集；系统进入会话后没有任何状态变化；系统让用户误以为已经正在听或正在看。
+
+覆盖对象:: xref:session-entry[进入会话, rel=verifies]；xref:idle-state[未进入会话, rel=verifies]。
+
+[#speech-input-accepted.assertion, normative=must]
+=== 用户语音输入被接收
+
+前置状态:: 用户已进入会话；麦克风已授权；系统处于正在听或语音可用状态。
+
+用户动作:: 用户用自然语音提出一个可以用语音回答的问题。
+
+期望结果:: 系统表现出已接收用户语音，并生成与该语音问题相关的回应或澄清。
+
+不符合表现:: 系统没有任何接收状态；系统只接受文字输入；系统把语音输入当成离线录音上传；系统在麦克风关闭时仍声称正在听。
+
+覆盖对象:: xref:speech-only-turn[语音提问, rel=verifies]；xref:listening-state[正在听, rel=verifies]。
+
+[#visual-input-participates.assertion, normative=must]
+=== 当前视觉现场参与回答
+
+前置状态:: 用户已进入会话；麦克风和摄像头已授权；系统处于正在听和正在看状态；画面中存在可被常识性描述的对象。
+
+用户动作:: 用户把摄像头对准该对象，并用语音询问“这个是什么”或等价表达。
+
+期望结果:: 系统以自然语音回应，并使回应内容与当前画面对象形成可理解关联；系统无法可靠判断时，说明视觉限制或请求用户调整画面。
+
+不符合表现:: 系统要求用户手动上传图片；系统只根据语音文本回答；系统声称无法看见但界面显示正在看；系统对画面中不存在的对象作确定描述。
+
+覆盖对象:: xref:visual-grounded-turn[视觉现场提问, rel=verifies]；xref:current-visual-reference[当前视觉指代, rel=verifies]。
+
+[#speech-response-audible.assertion, normative=must]
+=== AI 自然语音回应可听
+
+前置状态:: 用户已提出有效问题；输出设备可用；系统正在处理。
+
+用户动作:: 用户等待 AI 回应。
+
+期望结果:: AI 以自然语音输出主要回答，并通过可听声音或等价状态让用户知道正在回应。
+
+不符合表现:: 系统只显示文字且未声明语音受限；系统生成语音但用户无法听到且无错误投影；系统播放与当前会话无关的旧回答。
+
+覆盖对象:: xref:response-delivery[回应输出, rel=verifies]；xref:speech-output-contract[语音输出契约, rel=verifies]。
+
+[#conversation-remains-continuable.assertion, normative=must]
+=== 回应后会话可继续
+
+前置状态:: AI 已完成一次语音回答；会话未结束；输入能力仍可用。
+
+用户动作:: 用户围绕同一对象或回答提出追问。
+
+期望结果:: 系统把追问放回当前会话语境中解释，并给出相关回应、澄清或限制说明。
+
+不符合表现:: 系统每次都要求用户从头描述；系统丢失刚才的视觉对象且不说明；系统把追问当成完全无关请求；系统在回答后自动结束会话。
+
+覆盖对象:: xref:same-topic-follow-up[同话题追问, rel=verifies]；xref:context-flow-completion[上下文流完成, rel=verifies]。
+
+[#session-end-stops-capture.assertion, normative=must]
+=== 会话结束停止采集
+
+前置状态:: 用户处于活跃会话；麦克风或视觉输入正在采集。
+
+用户动作:: 用户执行结束会话动作。
+
+期望结果:: 系统进入已结束状态，停止当前会话的麦克风和视觉输入采集，并让用户知道会话已结束。
+
+不符合表现:: 会话结束后仍显示正在听或正在看；会话结束后继续采集输入；系统播放未完成回答且无结束状态；用户无法判断会话是否结束。
+
+覆盖对象:: xref:session-end[结束会话, rel=verifies]；xref:ended-state[已结束, rel=verifies]。

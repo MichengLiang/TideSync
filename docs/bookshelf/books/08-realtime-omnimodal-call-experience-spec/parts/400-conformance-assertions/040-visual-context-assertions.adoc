@@ -1,0 +1,69 @@
+[#visual-context-assertions.assertion]
+== 视觉上下文断言
+
+视觉上下文断言验证系统是否真正使用当前视觉现场和会话内视觉上下文。它们防止拍照问答、通用语音回答或摄像头装饰冒充实时全模态体验。
+
+[#current-visible-object-answerable.assertion, normative=must]
+=== 当前可见对象可被询问
+
+前置状态:: 摄像头开启；画面中有一个清楚可见的主要对象；麦克风可用。
+
+用户动作:: 用户问“这个是什么”或等价表达。
+
+期望结果:: 系统围绕当前可见对象给出语音回答，或说明画面不足以判断并请求调整。
+
+不符合表现:: 系统要求用户上传图片；系统只给通用答案；系统回答与画面无关；系统编造画面中不存在的对象。
+
+覆盖对象:: xref:current-visual-reference[当前视觉指代, rel=verifies]；xref:visual-input-participates[当前视觉现场参与回答, rel=verifies]。
+
+[#visual-ambiguity-requests-clarification.assertion, normative=should]
+=== 多候选视觉对象触发澄清
+
+前置状态:: 摄像头开启；画面中存在多个可能被“这个”指代的对象。
+
+用户动作:: 用户问“这个怎么用”或等价表达，但没有进一步指明对象。
+
+期望结果:: 系统请求用户澄清，或描述候选对象并询问用户指的是哪一个。
+
+不符合表现:: 系统随机选择对象作确定回答；系统忽略画面只给通用说明；系统声称看不见但状态显示正在看。
+
+覆盖对象:: xref:visual-ambiguity[视觉歧义, rel=verifies]。
+
+[#visual-scene-change-updates-focus.assertion, normative=must]
+=== 视觉现场变化更新焦点
+
+前置状态:: 用户正在围绕一个视觉对象对话；摄像头开启。
+
+用户动作:: 用户把摄像头移动到另一个清楚对象，并问“那这个呢”。
+
+期望结果:: 系统把新画面对象作为当前焦点回答，或说明新画面不足以判断。
+
+不符合表现:: 系统继续回答旧对象；系统把旧画面当成当前画面；系统无法区分当前视觉现场和历史视觉上下文。
+
+覆盖对象:: xref:visual-change[视觉变化, rel=verifies]；xref:topic-shift[话题切换, rel=verifies]。
+
+[#camera-off-visual-query-limited.assertion, normative=must]
+=== 摄像头关闭后的视觉问题受限
+
+前置状态:: 用户已关闭摄像头；系统不处于正在看状态。
+
+用户动作:: 用户问“你看这个是什么”或等价视觉问题。
+
+期望结果:: 系统说明当前没有视觉输入，或提示用户开启摄像头。
+
+不符合表现:: 系统在无视觉输入时作确定视觉判断；系统仍显示正在看；系统假装可以使用当前画面。
+
+覆盖对象:: xref:camera-off-flow[关闭摄像头, rel=verifies]；xref:limited-state[受限, rel=verifies]。
+
+[#historical-visual-reference-bounded.assertion, normative=should]
+=== 历史视觉指代有边界
+
+前置状态:: 用户在同一会话中展示过一个对象，随后切换到其他画面。
+
+用户动作:: 用户问“刚才那个是什么”或等价表达。
+
+期望结果:: 系统基于可承接的历史视觉上下文回答，或说明无法可靠确定所指对象。
+
+不符合表现:: 系统把历史对象当成当前画面；系统编造未保存的视觉内容；系统拒绝承认合理的近期视觉上下文。
+
+覆盖对象:: xref:historical-visual-reference[历史视觉指代, rel=verifies]；xref:context-continuity-boundary[连续性边界, rel=verifies]。

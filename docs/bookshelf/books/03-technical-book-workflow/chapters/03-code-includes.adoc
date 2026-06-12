@@ -1,0 +1,8 @@
+== 代码片段
+
+代码片段属于本书内部资源。章节通过 include tag 引入需要进入书稿的片段。
+
+[source,js]
+----
+include::../examples/minimal-tool.mjs[tag=main]
+----

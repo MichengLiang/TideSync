@@ -1,0 +1,23 @@
+[#source-order-notation]
+== 源文件编排号
+
+源文件编排号写在 part 目录名和 chapter 文件名前部。indexterm:[源文件编排号]
+
+part 目录使用 `100-`、`200-`、`300-`。chapter 文件在所属 part 内使用 `010-`、`020-`、`030-`。
+
+中间插入新文件时，使用相邻编号之间的空位。
+
+[source,text]
+----
+parts/100-source-surface/
+parts/150-new-topic/
+parts/200-identity-and-relation/
+
+010-opening.adoc
+015-new-context.adoc
+020-main-flow.adoc
+----
+
+标题文本保留语义名称。长期引用的标题使用显式 ID。
+
+编排号帮助维护者观察源文件顺序；显式 ID 帮助读者和工具链稳定引用标题。

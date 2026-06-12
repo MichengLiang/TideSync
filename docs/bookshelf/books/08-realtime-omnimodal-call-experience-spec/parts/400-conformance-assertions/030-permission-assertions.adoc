@@ -1,0 +1,69 @@
+[#permission-assertions.assertion]
+== 权限断言
+
+权限断言验证系统是否把麦克风、摄像头和等价视觉输入的授权状态正确投影给用户。权限断言保护用户控制权。
+
+[#microphone-permission-visible.assertion, normative=must]
+=== 麦克风授权状态可见
+
+前置状态:: 用户进入会话；麦克风权限尚未授予。
+
+用户动作:: 用户触发语音会话准备。
+
+期望结果:: 系统请求或提示麦克风授权，并让用户知道授权前系统不能听见语音。
+
+不符合表现:: 系统未授权即显示正在听；系统没有说明缺少麦克风权限；用户拒绝后系统仍表现为正在听。
+
+覆盖对象:: xref:microphone-permission[麦克风授权, rel=verifies]；xref:permission-pending-state[等待授权, rel=verifies]。
+
+[#camera-permission-visible.assertion, normative=must]
+=== 摄像头授权状态可见
+
+前置状态:: 用户进入会话；视觉输入权限尚未授予。
+
+用户动作:: 用户触发视觉会话准备或开启摄像头。
+
+期望结果:: 系统请求或提示视觉输入授权，并让用户知道授权前 AI 不能使用当前视觉现场。
+
+不符合表现:: 系统未授权即显示正在看；系统没有说明缺少摄像头权限；用户拒绝后系统仍声称可以看见当前画面。
+
+覆盖对象:: xref:camera-permission[摄像头授权, rel=verifies]；xref:watching-state[正在看, rel=verifies]。
+
+[#permission-denial-limits-session.assertion, normative=must]
+=== 权限拒绝进入受限状态
+
+前置状态:: 系统请求麦克风或视觉输入权限。
+
+用户动作:: 用户拒绝权限。
+
+期望结果:: 系统进入受限状态，说明哪项能力不可用，并提供重新授权、继续受限模式或结束会话的路径。
+
+不符合表现:: 系统无解释停止；系统继续显示相关能力可用；系统把权限拒绝当作崩溃；系统要求用户猜测失败原因。
+
+覆盖对象:: xref:permission-denial[权限拒绝, rel=verifies]；xref:limited-state[受限, rel=verifies]。
+
+[#permission-revocation-updates-state.assertion, normative=must]
+=== 权限撤回更新状态
+
+前置状态:: 用户处于活跃会话；麦克风或视觉输入正在采集。
+
+用户动作:: 用户关闭麦克风、关闭摄像头、停止屏幕共享或撤回权限。
+
+期望结果:: 系统停止对应采集状态，并投影新的受限能力边界。
+
+不符合表现:: 麦克风关闭后仍显示正在听；摄像头关闭后仍显示正在看；停止屏幕共享后 AI 仍基于当前屏幕作确定回答。
+
+覆盖对象:: xref:permission-revocation[权限撤回, rel=verifies]；xref:stop-capture[停止采集, rel=verifies]。
+
+[#permission-recovery-restores-capability.assertion, normative=should]
+=== 权限恢复重新投影能力
+
+前置状态:: 会话处于受限状态；用户重新授权或恢复设备。
+
+用户动作:: 用户重新开启麦克风、摄像头或屏幕共享。
+
+期望结果:: 系统把恢复后的能力投影给用户，并把恢复后的输入作为当前可用输入。
+
+不符合表现:: 权限恢复后状态不变化；系统继续声称能力不可用；系统把权限关闭期间未采集的信息当作已知事实。
+
+覆盖对象:: xref:permission-recovery[权限恢复, rel=verifies]；xref:camera-on-flow[恢复摄像头, rel=verifies]。

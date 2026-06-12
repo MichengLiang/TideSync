@@ -1,0 +1,10 @@
+= 参考坐标
+
+* [[[zave-jackson-1997]]] Pamela Zave and Michael Jackson, “Four Dark Corners of Requirements Engineering”, ACM TOSEM, 1997.
+* [[[simon-artificial]]] Herbert A. Simon, _The Sciences of the Artificial_, 1969.
+* [[[rfc2119]]] S. Bradner, “Key words for use in RFCs to Indicate Requirement Levels”, RFC 2119, 1997.
+* [[[rfc8174]]] B. Leiba, “Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words”, RFC 8174, 2017.
+* [[[jcp-tck-guide]]] Java Community Process, Spec Lead Guide: Developing Technology Compatibility Kits.
+* [[[gherkin-reference]]] Cucumber Documentation, Gherkin Reference.
+* [[[openai-gpt4o]]] OpenAI, Hello GPT-4o.
+* [[[google-live-api]]] Google AI for Developers, Gemini Live API.

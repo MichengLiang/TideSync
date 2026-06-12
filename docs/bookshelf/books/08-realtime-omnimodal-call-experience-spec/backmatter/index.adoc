@@ -1,0 +1,18 @@
+= 索引
+
+本索引 section 为书籍后置索引位置。正文中的稳定标题、术语表和交叉引用提供主要导航。
+
+关键入口包括：
+
+* xref:realtime-omnimodal-call-experience[实时全模态视频通话体验]
+* xref:constitutive-conditions[构成性条件]
+* xref:domain-assumptions[领域事实]
+* xref:stakeholder-goals[目标愿望]
+* xref:conformance-model[符合性模型]
+* xref:session-lifecycle[会话生命周期]
+* xref:observable-state-model[可观察状态模型]
+* xref:visual-reference-flow[视觉指代流]
+* xref:interruption-flow[打断流]
+* xref:user-visible-feedback[用户可见反馈]
+* xref:assertion-surface[断言表面]
+* xref:coverage-map[覆盖映射]
