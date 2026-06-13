@@ -3,3 +3,11 @@ dist/
 coverage/
 .turbo/
 *.log
+tmp/
+.env
+.venv/
+.uv-cache/
+.coverage
+htmlcov/
+__pycache__/
+*.pyc
