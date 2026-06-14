@@ -2,7 +2,7 @@
 
 Branch: `feature/qwen35-input-turn-video-state`
 
-Implementation commit SHA: final commit on this branch; record with `git rev-parse --short HEAD` after commit.
+Implementation commit SHA: `e6c9fb9`.
 
 ## Files Changed
 
