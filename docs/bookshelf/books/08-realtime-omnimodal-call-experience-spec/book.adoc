@@ -122,6 +122,36 @@ include::parts/500-quality-governance/050-accessibility-and-environment.adoc[]
 
 include::parts/500-quality-governance/060-conformance-statement.adoc[]
 
+[#part-cost-resource-budget]
+= 成本、资源与体验预算
+
+[partintro]
+include::parts/600-cost-resource-and-experience-budget/_partintro.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/010-cost-governance-identity.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/020-reader-and-decision-surface.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/030-cost-resource-ledger.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/040-experience-budget-and-hard-gates.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/050-modality-budget-model.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/060-visual-evidence-and-reference-assets.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/070-user-control-and-automation-boundary.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/080-edge-cloud-coordination.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/090-unit-economics-and-allocation.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/100-cost-degradation-and-public-projection.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/110-cost-conformance-assertions.adoc[]
+
+include::parts/600-cost-resource-and-experience-budget/120-cost-nonconformance-cases.adoc[]
+
 [appendix]
 include::backmatter/appendix-a-conformance-checklist.adoc[]
 
