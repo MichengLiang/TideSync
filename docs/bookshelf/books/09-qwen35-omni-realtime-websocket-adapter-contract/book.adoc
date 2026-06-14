@@ -23,6 +23,9 @@ include::frontmatter/colophon.adoc[]
 [preface]
 include::frontmatter/preface.adoc[]
 
+[preface]
+include::frontmatter/reader-map.adoc[]
+
 [acknowledgments]
 include::frontmatter/acknowledgments.adoc[]
 

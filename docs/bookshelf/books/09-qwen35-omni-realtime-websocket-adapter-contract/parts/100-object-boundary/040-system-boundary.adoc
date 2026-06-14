@@ -13,7 +13,7 @@
 [#runtime-source-boundary.boundary]
 === 运行源码边界
 
-当前对象的可修改源码必须在 TideSync 仓库内可审查。受控源码目录名必须表达上游派生身份和 Qwen adapter 责任面；`forks/vision-agents-qwen-native` 是本书用于该身份的规范目录表面。若团队仓库规范要求其他目录名，该目录名必须保留同等身份信息，并满足本章边界：源码不得只存在于 external，不得通过嵌套 git 仓库隐藏 diff，不得依赖开发者本机未提交路径，不得让 TideSync 运行时继续加载 PyPI 旧 adapter。
+当前对象的可修改源码必须在 TideSync 仓库内可审查。受控源码目录名必须表达上游派生身份和 Qwen adapter 责任面；`forks/vision-agents-qwen-native` 是本书用于该身份的规范目录表面。若团队仓库规范要求其他目录名，该目录名必须保留同等身份信息，并满足 xref:controlled-source-contract[受控源码, rel=constrains]和 xref:runtime-import-contract[运行时加载, rel=constrains]的边界：源码不得只存在于 external，不得通过嵌套 git 仓库隐藏 diff，不得依赖开发者本机未提交路径，不得让 TideSync 运行时继续加载 PyPI 旧 adapter。
 
 当前对象可以引用 external 中的上游 Vision Agents clone 作为证据来源。证据来源不是完成物。完成物必须进入 TideSync PR。
 
@@ -22,7 +22,7 @@
 
 Vision Agents core 是当前对象的运行承载。adapter 应优先使用 core 已有的 `RealtimeAudioOutputDone`、speech started/ended、transcript、interrupt、audio output flush、FunctionRegistry 和 metrics 抽象。
 
-当 Qwen contract 无法由现有 core 抽象表达时，符合实现可以扩展 core，但扩展必须被本书合同授权，并在 TideSync PR 中说明公共契约、消费者、兼容性和测试证据。adapter 不得为了绕过 core 契约而把可观察状态藏在 provider 私有变量里。
+当 Qwen contract 无法由现有 core 抽象表达时，符合实现可以扩展 core，但扩展必须被 xref:core-limitations[Core 限制, rel=depends-on]和目标合同授权，并在 TideSync PR 中说明公共契约、消费者、兼容性和测试证据。adapter 不得为了绕过 core 契约而把可观察状态藏在 provider 私有变量里。
 
 [#neighbor-objects.boundary]
 === 相邻对象

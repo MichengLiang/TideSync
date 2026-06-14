@@ -1,7 +1,7 @@
 [#adapter-assertion-surface.contract]
 == 断言表面
 
-本书断言检查 adapter 层公共行为。它们不是纯用户黑盒体验断言。08 号书检查用户体验；本书检查支撑该体验的 Qwen WebSocket adapter 是否正确发送事件、接收事件、更新状态、投射 core 事件、保留错误和产生证据。
+本书断言检查 adapter 层公共行为。它们不是纯用户黑盒体验断言。xref:../08-realtime-omnimodal-call-experience-spec/book.adoc#assertion-surface[08 号书断言表面]检查用户体验；本书检查支撑该体验的 Qwen WebSocket adapter 是否正确发送事件、接收事件、更新状态、投射 core 事件、保留错误和产生证据。
 
 [#adapter-assertion-fields.contract]
 === 断言字段

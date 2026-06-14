@@ -20,9 +20,9 @@ TideSync 必须拥有一个可审查、可运行、可测试、可验收的 Qwen
 [#qa-outcome.requirement, normative=must]
 === 验收层结果
 
-测试与验收工程师必须能够依据本书断言逐条判定实现。每条核心断言必须给出前置状态、输入事件或用户动作、期望 adapter 输出、期望 Vision Agents core 事件、期望 client 发送事件、禁止行为和证据要求。
+测试与验收工程师必须能够依据 xref:adapter-assertion-surface[断言表面, rel=depends-on]逐条判定实现。每条核心断言必须给出前置状态、输入事件或用户动作、期望 adapter 输出、期望 Vision Agents core 事件、期望 client 发送事件、禁止行为和证据要求。
 
-验收不得依赖单一演示。真实通话、录屏和日志可以补充说明现象；核心证据来自可重复测试、event replay、fake WebSocket、运行时 import 路径断言、PR diff 和符合性声明。
+验收不得依赖单一演示。真实通话、录屏和日志可以补充说明现象；核心证据来自 xref:test-evidence-contract[测试证据契约, rel=depends-on]定义的可重复测试、event replay、fake WebSocket、运行时 import 路径断言、PR diff 和符合性声明。
 
 [#project-governance-outcome.requirement, normative=must]
 === 治理层结果

@@ -13,3 +13,9 @@ Stale Delta:: response 被取消、中断或过期后迟到的音频、文本或
 Function Call Output:: Qwen 工具调用结果回传 item，类型为 `function_call_output`。
 
 Usage:: Qwen `response.done` 中的计量字段，包括 token details 和 `plugins.search`。
+
+PR 符合性声明:: 实现 PR 中记录实现范围、断言结果、测试命令、运行路径、上游来源、偏离项和未知项的审查表面。
+
+受控源码目录:: TideSync 仓库内承载 Vision Agents 派生源码的目录；该目录必须进入 PR diff，并通过依赖解析进入运行时。
+
+文档冲突登记:: 记录官方页面、本地抓取文档、SDK示例、上游默认值和 live 行为差异的维护表面。

@@ -1,0 +1,31 @@
+[#reader-map.contract]
+== 读者角色入口
+
+本书服务五类消费者。每类消费者进入本书时，需要读取的对象不同；角色入口把读者动作和书内合同表面连接起来。
+
+[cols="1,2,3", options="header"]
+|===
+|读者角色 |入口 |读取目标
+
+|开发者
+|xref:qwen-websocket-adapter-artifact[Qwen WebSocket Adapter 人工制品]；xref:source-and-runtime-contract[源码与运行契约]；xref:session-config-contract[Session 配置契约]；xref:server-event-contract[服务端事件契约]；xref:state-model[封闭状态模型]；xref:interruption-contract[打断契约]
+|确定受控源码、运行时加载、配置字段、事件映射、状态职责和打断控制语义，不得用外层配置、日志或单点补丁替代 adapter contract。
+
+|测试与验收工程师
+|xref:adapter-assertion-surface[断言表面]；xref:runtime-source-assertions[源码与运行路径断言]；xref:event-mapping-assertions[事件映射断言]；xref:adapter-interruption-assertions[打断断言]；xref:coverage-map[覆盖映射]；xref:appendix-conformance-checklist[符合性检查表]
+|按前置状态、输入事件、期望 adapter 行为、期望 core 投影、期望 client 事件、不符合表现和证据要求逐条验收实现。
+
+|项目负责人
+|xref:native-support-definition[原生支持定义]；xref:core-conformance[核心符合]；xref:strong-conformance[强要求偏离]；xref:nonconformance-model[不符合判定]；xref:pr-conformance-statement[PR 符合性声明]；xref:live-verification-boundary[Live 验证边界]
+|判断交付是否保护“原生一等公民支持”，区分核心符合、强要求偏离、扩展能力、未知项阻塞和假成功。
+
+|安全、运营与成本治理负责人
+|xref:tools-search-usage-contract[工具、搜索与 Usage 契约]；xref:error-contract[错误契约]；xref:usage-contract[Usage 保留]；xref:metrics-projection-contract[Metrics 投影]；xref:structured-error-contract[结构化错误]；xref:document-conflict-register[文档冲突登记]
+|审查外部能力、搜索互斥、工具调用、usage 计量、错误结构化字段和文档冲突是否进入可治理表面。
+
+|维护者
+|xref:upstream-provenance[上游来源与派生治理]；xref:source-import-scope[导入范围]；xref:upstream-sync-contract[上游同步]；xref:maintenance-boundary[维护边界]；xref:appendix-structured-surface[结构化表面约定]；xref:glossary[术语表]
+|追溯派生源码来源、审查上游差异、维护 role 和 rel 词表、判断未来上游替换或范围扩展是否仍满足本书合同。
+|===
+
+角色入口不替代正文。读者的正式判断仍以被入口引用的对象定义、合同章节、断言章节和证据章节为准。
