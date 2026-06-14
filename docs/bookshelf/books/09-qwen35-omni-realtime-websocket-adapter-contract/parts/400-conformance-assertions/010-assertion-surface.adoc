@@ -1,0 +1,36 @@
+[#adapter-assertion-surface.contract]
+== 断言表面
+
+本书断言检查 adapter 层公共行为。它们不是纯用户黑盒体验断言。08 号书检查用户体验；本书检查支撑该体验的 Qwen WebSocket adapter 是否正确发送事件、接收事件、更新状态、投射 core 事件、保留错误和产生证据。
+
+[#adapter-assertion-fields.contract]
+=== 断言字段
+
+每条断言使用稳定字段。
+
+前置状态:: adapter、TideSync 运行时、Qwen fake server 或真实服务在动作发生前的状态。
+
+输入事件或动作:: Qwen 服务端事件、用户动作、测试注入事件或配置动作。
+
+期望 adapter 行为:: adapter 必须更新的状态、产生的输出、保留的字段或执行的发送动作。
+
+期望 core 投影:: Vision Agents core 应收到的 Realtime 事件、turn 事件、audio output 或 error 投影。
+
+期望 client 事件:: adapter 应向 Qwen WebSocket 发送的客户端事件。
+
+不符合表现:: 看到这些表现时，断言失败。
+
+证据要求:: 测试、event replay、fake websocket 记录、import 路径、PR diff 或 live smoke 证据。
+
+覆盖对象:: 被该断言验证的契约章节。
+
+[#assertion-strength-rules.contract]
+=== 断言强度
+
+`normative=must` 的断言验证核心合同。失败时，当前 adapter 不能声明核心符合。
+
+`normative=should` 的断言验证强要求。失败时，PR 必须写偏离声明。
+
+`normative=may` 的断言验证声明后才适用的扩展能力。
+
+断言失败不能被一次真实通话成功抵消。一个 fake WebSocket replay 中的核心事件映射失败，表示 adapter contract 失败；真实服务偶然没有触发该路径，不构成通过。

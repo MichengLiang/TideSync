@@ -1,0 +1,144 @@
+= Qwen3.5 Omni Realtime WebSocket Adapter 适配契约与验收规约
+弥澄亮 <t103ooooo@stu.mju.edu.cn>
+v0.1, 2026-06
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectnums:
+:partnums:
+:part-signifier: Part
+:icons: font
+:experimental:
+:idprefix:
+:idseparator: -
+
+include::../../shared/attributes.adoc[]
+
+[abstract]
+include::frontmatter/abstract.adoc[]
+
+[colophon]
+include::frontmatter/colophon.adoc[]
+
+[preface]
+include::frontmatter/preface.adoc[]
+
+[acknowledgments]
+include::frontmatter/acknowledgments.adoc[]
+
+[#part-object-boundary]
+= 对象、事实与边界
+
+[partintro]
+include::parts/100-object-boundary/_partintro.adoc[]
+
+include::parts/100-object-boundary/010-artifact-identity.adoc[]
+
+include::parts/100-object-boundary/020-domain-facts.adoc[]
+
+include::parts/100-object-boundary/030-expected-change.adoc[]
+
+include::parts/100-object-boundary/040-system-boundary.adoc[]
+
+include::parts/100-object-boundary/050-conformance-model.adoc[]
+
+[#part-current-system]
+= 现有系统事实图
+
+[partintro]
+include::parts/200-current-system/_partintro.adoc[]
+
+include::parts/200-current-system/010-tidesync-runtime-path.adoc[]
+
+include::parts/200-current-system/020-qwen-official-contract.adoc[]
+
+include::parts/200-current-system/030-vision-agents-qwen-adapter.adoc[]
+
+include::parts/200-current-system/040-vision-agents-core-carriers.adoc[]
+
+include::parts/200-current-system/050-gap-map.adoc[]
+
+[#part-target-contract]
+= 目标 Adapter 契约
+
+[partintro]
+include::parts/300-target-contract/_partintro.adoc[]
+
+include::parts/300-target-contract/010-source-and-runtime-contract.adoc[]
+
+include::parts/300-target-contract/020-session-config-contract.adoc[]
+
+include::parts/300-target-contract/030-client-event-contract.adoc[]
+
+include::parts/300-target-contract/040-server-event-contract.adoc[]
+
+include::parts/300-target-contract/050-state-model.adoc[]
+
+include::parts/300-target-contract/060-interruption-contract.adoc[]
+
+include::parts/300-target-contract/070-tools-search-usage-contract.adoc[]
+
+include::parts/300-target-contract/080-error-contract.adoc[]
+
+[#part-conformance-assertions]
+= 符合性断言与不符合案例
+
+[partintro]
+include::parts/400-conformance-assertions/_partintro.adoc[]
+
+include::parts/400-conformance-assertions/010-assertion-surface.adoc[]
+
+include::parts/400-conformance-assertions/020-runtime-source-assertions.adoc[]
+
+include::parts/400-conformance-assertions/030-session-config-assertions.adoc[]
+
+include::parts/400-conformance-assertions/040-event-mapping-assertions.adoc[]
+
+include::parts/400-conformance-assertions/050-interruption-assertions.adoc[]
+
+include::parts/400-conformance-assertions/060-video-turn-assertions.adoc[]
+
+include::parts/400-conformance-assertions/070-tools-search-usage-assertions.adoc[]
+
+include::parts/400-conformance-assertions/080-error-assertions.adoc[]
+
+include::parts/400-conformance-assertions/090-nonconformance-cases.adoc[]
+
+include::parts/400-conformance-assertions/100-coverage-map.adoc[]
+
+[#part-evidence-governance]
+= 测试证据、PR治理与未知项
+
+[partintro]
+include::parts/500-evidence-governance/_partintro.adoc[]
+
+include::parts/500-evidence-governance/010-test-evidence-contract.adoc[]
+
+include::parts/500-evidence-governance/020-pr-conformance-statement.adoc[]
+
+include::parts/500-evidence-governance/030-upstream-provenance.adoc[]
+
+include::parts/500-evidence-governance/040-live-verification-boundary.adoc[]
+
+include::parts/500-evidence-governance/050-maintenance-boundary.adoc[]
+
+[appendix]
+include::backmatter/appendix-a-conformance-checklist.adoc[]
+
+[appendix]
+include::backmatter/appendix-b-assertion-template.adoc[]
+
+[appendix]
+include::backmatter/appendix-c-upstream-template.adoc[]
+
+[appendix]
+include::backmatter/appendix-d-structured-surface.adoc[]
+
+[glossary]
+include::backmatter/glossary.adoc[]
+
+[bibliography]
+include::backmatter/bibliography.adoc[]
+
+[index]
+include::backmatter/index.adoc[]

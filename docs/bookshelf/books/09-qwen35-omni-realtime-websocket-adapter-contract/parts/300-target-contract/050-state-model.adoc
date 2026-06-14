@@ -1,0 +1,78 @@
+[#state-model.contract]
+== 封闭状态模型
+
+状态模型定义当前 WebSocket adapter 必须维护的状态集合。该集合是当前对象的封闭集合；实现可以用不同代码结构表达，但不能省略这些状态职责。
+
+[#session-state.state, normative=must]
+=== 会话状态
+
+会话状态集合包括：`disconnected`、`connecting`、`session_update_sent`、`session_active`、`reconnecting`、`closing`、`closed`、`failed`。
+
+`session_active` 只能在服务端接受会话配置后成立。`reconnecting` 必须清理或隔离旧 response、旧输入轮次和旧视频许可。`failed` 必须携带结构化错误原因。
+
+[#config-state.state, normative=must]
+=== 配置状态
+
+配置状态集合包括：`draft_config`、`sent_config`、`accepted_config`、`rejected_config`、`normalized_config`。
+
+`normalized_config` 用于记录服务端返回配置与客户端发送配置的差异。格式字符串、ASR 模型、VAD 类型、tools/search互斥、voice 和 modalities 都属于配置状态观察对象。
+
+[#input-audio-state.state, normative=must]
+=== 输入音频状态
+
+输入音频状态集合包括：`turn_empty`、`audio_appended`、`speech_started`、`speech_stopped`、`committed`、`cleared`、`waiting_response`。
+
+该状态按输入轮次维护。新一轮用户输入必须创建或重置输入轮次状态。`speech_stopped` 和 `committed` 后，当前轮次不再接受图片追加。
+
+[#video-frame-state.state, normative=must]
+=== 视频帧状态
+
+视频帧状态集合包括：`no_track`、`track_available_waiting_audio`、`send_allowed`、`send_closed_for_turn`、`track_removed`、`track_reconnected_waiting_audio`、`suspended_after_image_timing_error`。
+
+`send_allowed` 必须依赖当前输入轮次已有音频事实。`track_reconnected_waiting_audio` 必须阻止新 track 在没有当前轮音频时立即发图。`suspended_after_image_timing_error` 必须阻止继续盲发，直到输入轮次状态重新满足许可条件。
+
+[#response-state.state, normative=must]
+=== 响应状态
+
+响应状态集合包括：`no_response`、`response_created`、`output_item_open`、`content_part_open`、`audio_streaming`、`text_streaming`、`transcript_streaming`、`function_call_pending`、`cancel_requested`、`interrupted`、`completed`、`failed`。
+
+响应状态按 response id 维护。当前 response id、cancelled response ids 和 completed response ids 必须可区分。属于旧 response 的 delta 不得进入当前可播放输出。
+
+[#local-audio-state.state, normative=must]
+=== 本地音频输出状态
+
+本地音频输出状态集合包括：`no_audio_output`、`audio_output_streaming`、`audio_done_received`、`audio_output_done_emitted`、`audio_interrupted`、`audio_flush_emitted`、`stale_audio_blocked`。
+
+`audio_interrupted` 必须导致 `audio_flush_emitted` 或等价下游 flush。`audio_done_received` 必须导致 audio output done。`stale_audio_blocked` 必须记录旧 response delta 被丢弃或隔离。
+
+[#turn-state.state, normative=must]
+=== 用户与助手 Turn 状态
+
+Turn 状态集合包括：`user_turn_idle`、`user_turn_started`、`user_turn_ended`、`agent_turn_idle`、`agent_turn_started`、`agent_turn_ended`、`agent_turn_interrupted`。
+
+Qwen VAD 与 response lifecycle 必须推动这些状态进入 Vision Agents core 事件。缺少 turn 投影时，上层无法判断谁正在说话、谁被打断、当前焦点在哪里。
+
+[#transcript-state.state, normative=must]
+=== 转写状态
+
+转写状态集合包括：`user_transcript_empty`、`user_transcript_delta`、`user_transcript_final`、`agent_transcript_empty`、`agent_transcript_delta`、`agent_transcript_final`、`transcript_interrupted_boundary`。
+
+被打断回答的 transcript 不得被当作已完整交付内容。`transcript_interrupted_boundary` 必须防止未输出或已取消的旧文本继续补全 conversation。
+
+[#tool-search-usage-state.state, normative=must]
+=== 工具、搜索与 Usage 状态
+
+工具状态集合包括：`tools_disabled`、`tools_registered`、`function_call_delta_seen`、`function_call_ready`、`tool_running`、`tool_succeeded`、`tool_failed`、`tool_output_sent`、`tool_response_requested`。
+
+搜索状态集合包括：`search_disabled`、`search_enabled`、`search_source_enabled`、`search_rejected_due_to_tools`、`search_usage_seen`、`search_usage_missing`。
+
+Usage 状态集合包括：`usage_absent`、`usage_seen`、`usage_parsed`、`usage_parse_failed`、`raw_usage_retained`。
+
+这些状态服务工具调用、成本治理和搜索证据。它们不能只存在于日志。
+
+[#error-state.state, normative=must]
+=== 错误状态
+
+错误状态集合包括：`no_error`、`session_config_error`、`connection_error_recoverable`、`connection_error_terminal`、`input_timing_error`、`audio_format_error`、`transcription_model_error`、`cancel_error`、`tool_schema_error`、`tool_execution_error`、`search_tools_conflict_error`、`usage_parse_error`、`unknown_qwen_error`。
+
+每个错误状态必须定义影响范围：会话状态、输入轮次、视频发送许可、响应状态、本地音频输出、工具状态或 usage 状态。错误状态没有影响范围时，只是日志标签，不是 adapter 规约。

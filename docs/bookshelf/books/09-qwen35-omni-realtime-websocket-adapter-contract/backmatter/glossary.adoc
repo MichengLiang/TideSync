@@ -1,0 +1,15 @@
+Qwen WebSocket Adapter:: TideSync 仓库内受控的 Vision Agents Qwen3.5 Omni Realtime WebSocket adapter 派生源码对象。
+
+原生支持:: Qwen 官方 WebSocket contract 通过 adapter、Vision Agents core 和 TideSync 运行路径成为可配置、可观察、可测试行为。
+
+受控源码:: 进入 TideSync 仓库、出现在 PR diff、可被运行路径加载和审查的源码。
+
+Event Replay:: 用固定 Qwen 服务端事件序列驱动 adapter，并断言输出、状态和发送事件的测试。
+
+Fake WebSocket:: 测试中替代真实 Qwen WebSocket 的可控双向事件记录器。
+
+Stale Delta:: response 被取消、中断或过期后迟到的音频、文本或转写增量。
+
+Function Call Output:: Qwen 工具调用结果回传 item，类型为 `function_call_output`。
+
+Usage:: Qwen `response.done` 中的计量字段，包括 token details 和 `plugins.search`。

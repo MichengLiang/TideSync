@@ -1,0 +1,55 @@
+[#client-event-contract.contract]
+== 客户端事件契约
+
+客户端事件契约定义 adapter 可以向 Qwen WebSocket 发送的事件集合。当前 WebSocket adapter 的客户端事件集合为封闭集合。
+
+[#client-event-set.contract, normative=must]
+=== 客户端事件集合
+
+Adapter 必须实现并测试以下客户端事件：
+
+`session.update`:: 建立或更新会话配置。
+
+`input_audio_buffer.append`:: 发送当前输入轮次的音频数据。
+
+`input_audio_buffer.commit`:: Manual 模式提交当前音频缓冲。
+
+`input_audio_buffer.clear`:: 清理当前音频缓冲，用于 Manual 或错误恢复。
+
+`input_image_buffer.append`:: 在当前输入轮次允许时发送图片帧。
+
+`response.cancel`:: 取消当前响应。
+
+`conversation.item.create`:: 回传工具执行结果，item 类型为 `function_call_output`。
+
+`response.create`:: Manual 模式或工具结果回传后触发模型生成响应。
+
+这些事件之外的 Qwen client event 不进入当前核心合同。实现若新增其他事件，必须说明官方来源、消费者、状态影响和测试证据。
+
+[#audio-append-contract.contract, normative=must]
+=== 音频 Append
+
+`input_audio_buffer.append` 必须发送 16 kHz 单声道 PCM 数据的 Base64 字符串。adapter 可以从 GetStream PcmData 重采样，但发送前必须保持 Qwen 输入约束。
+
+每次音频 append 必须更新当前输入轮次状态。该状态用于 VAD、Manual、图片发送许可、用户 participant 归属和错误恢复。
+
+[#image-append-contract.contract, normative=must]
+=== 图片 Append
+
+`input_image_buffer.append` 只能在当前输入轮次满足图片发送许可时发送。许可条件由 turn 模式决定：VAD 模式下，当前轮次必须已有音频 append，且尚未进入 speech stopped 后的本轮关闭状态；Manual 模式下，图片前必须已有音频 append。
+
+Adapter 不得使用全局 once 布尔值作为唯一图片许可。图片许可必须随输入轮次、speech stopped、commit、clear、track 断开、track 重连和图片时序错误变化。
+
+[#cancel-contract.contract, normative=must]
+=== Response Cancel
+
+`response.cancel` 用于通知 Qwen 服务端取消当前响应。adapter 只有在存在可取消 response 或本地状态认为需要取消时发送该事件；若服务端返回无可取消响应错误，该错误不得使本地 audio flush 失效。
+
+`response.cancel` 不是打断完成条件。打断完成还要求本地音频输出停止或失去会话支配地位、旧 response 被隔离、用户新输入进入当前焦点。
+
+[#tool-result-events-contract.contract, normative=must]
+=== 工具结果事件
+
+工具执行完成后，adapter 必须发送 `conversation.item.create`，其中 item 类型为 `function_call_output`，`call_id` 等于服务端工具调用事件中的 call id，`output` 是工具执行结果字符串。
+
+工具结果发送后，adapter 必须发送 `response.create` 触发 Qwen 基于工具结果生成最终回答。工具失败也必须回传可解释的工具结果，不得让工具调用悬空。

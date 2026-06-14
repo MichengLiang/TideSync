@@ -1,0 +1,80 @@
+[#event-mapping-assertions.assertion]
+== 事件映射断言
+
+事件映射断言验证 Qwen 服务端事件是否进入 adapter 状态和 Vision Agents core 投影。
+
+[#speech-events-map-to-user-turn.assertion, normative=must]
+=== Speech Events 映射用户 Turn
+
+前置状态:: adapter 已连接，当前 participant 已由音频输入绑定。
+
+输入事件或动作:: fake server 依次发送 `input_audio_buffer.speech_started` 和 `input_audio_buffer.speech_stopped`。
+
+期望 adapter 行为:: 输入音频状态进入 `speech_started` 后进入 `speech_stopped`；图片发送许可在 speech_stopped 后关闭。
+
+期望 core 投影:: 依次 emit `RealtimeUserSpeechStarted` 和 `RealtimeUserSpeechEnded`，并由 flow 产生 UserTurn started/ended。
+
+期望 client 事件:: 无必需发送事件，除非 speech_started 触发打断路径。
+
+不符合表现:: speech_started 只触发 cancel；speech_stopped 被忽略；没有 user turn 投影；图片窗口仍然开放。
+
+证据要求:: event replay 测试和 core event 捕获。
+
+覆盖对象:: xref:input-buffer-events-contract[Input Buffer 事件, rel=verifies]。
+
+[#audio-delta-and-done-map-to-output.assertion, normative=must]
+=== Audio Delta 与 Done 映射音频输出
+
+前置状态:: adapter 当前 response id 为 `resp_1`，response 未取消。
+
+输入事件或动作:: fake server 发送 `response.audio.delta`，随后发送 `response.audio.done`。
+
+期望 adapter 行为:: delta 解码为 24 kHz PCM 并绑定 response id；done 关闭本地音频输出状态。
+
+期望 core 投影:: emit `RealtimeAudioOutput(response_id="resp_1")`，随后 emit `RealtimeAudioOutputDone(interrupted=False, response_id="resp_1")` 或等价完成事件。
+
+期望 client 事件:: 无。
+
+不符合表现:: 只发送音频 delta，不发送 audio done；done 被 response.done 替代且没有明确边界；音频自然 drain 被当成完成；response id 丢失。
+
+证据要求:: fake audio event replay，PCM输出和 done event 断言。
+
+覆盖对象:: xref:audio-output-events-contract[音频输出事件, rel=verifies]。
+
+[#transcript-delta-and-done-map-to-final.assertion, normative=must]
+=== Transcript Delta 与 Done 映射转写边界
+
+前置状态:: adapter 当前 response 正在输出助手音频转写。
+
+输入事件或动作:: fake server 发送多个 `response.audio_transcript.delta`，随后发送 `response.audio_transcript.done`。
+
+期望 adapter 行为:: 累计或保留 delta；done 形成助手 transcript final 边界。
+
+期望 core 投影:: 多个 `RealtimeAgentTranscript(mode=delta)` 后出现 `RealtimeAgentTranscript(mode=final)`，final 文本来自服务端 done 或本地累计文本。
+
+期望 client 事件:: 无。
+
+不符合表现:: 只在 response.done 发空 final；done 被忽略；delta 后没有 final；被打断旧 transcript 继续补全。
+
+证据要求:: transcript replay 测试和 conversation update 断言。
+
+覆盖对象:: xref:transcript-events-contract[转写事件, rel=verifies]。
+
+[#response-done-parses-usage.assertion, normative=must]
+=== Response Done 解析 Usage
+
+前置状态:: adapter 当前 response 正在输出。
+
+输入事件或动作:: fake server 发送包含 `usage` 和 `plugins.search` 的 `response.done`。
+
+期望 adapter 行为:: response 状态进入 completed；usage 被解析；raw usage 被保留；search usage 被保留。
+
+期望 core 投影:: metrics、event metadata、测试对象或符合性证据可读取 usage。
+
+期望 client 事件:: 无。
+
+不符合表现:: response.done 只清私有变量；usage 丢失；plugins.search 丢失；解析失败无错误状态。
+
+证据要求:: response.done fixture 和 usage 断言。
+
+覆盖对象:: xref:usage-events-contract[Usage 事件, rel=verifies]。

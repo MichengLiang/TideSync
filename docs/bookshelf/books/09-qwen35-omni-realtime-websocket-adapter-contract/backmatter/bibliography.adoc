@@ -1,0 +1,7 @@
+* Alibaba Cloud Model Studio, Qwen-Omni-Realtime API documentation: https://www.alibabacloud.com/help/en/model-studio/realtime
+* Alibaba Cloud Model Studio, Realtime client events documentation: https://www.alibabacloud.com/help/en/model-studio/client-events
+* Alibaba Cloud Model Studio, Realtime server events documentation.
+* GetStream, Vision Agents repository: https://github.com/GetStream/Vision-Agents
+* TideSync 08 号书：实时全模态视频通话体验规约与符合性判定。
+* TideSync deep-research：Qwen3.5 Omni Realtime 与 Vision Agents Qwen Adapter 完整适配缺口调查报告。
+* Pamela Zave and Michael Jackson, “Four Dark Corners of Requirements Engineering”, ACM TOSEM, 1997.

@@ -1,0 +1,61 @@
+[#vision-agents-qwen-adapter.domain]
+== Vision Agents Qwen Adapter 当前行为
+
+本章描述上游 Vision Agents v0.6.4 Qwen adapter 的当前行为。它是事实基线，不是目标规约。
+
+[#qwen-adapter-identity.domain]
+=== Provider 身份
+
+上游 Qwen provider 类为 `Qwen3Realtime`，导出为 `vision_agents.plugins.qwen.Realtime`。WebSocket client wrapper 为 `Qwen3RealtimeClient`。`Qwen3Realtime` 继承 Vision Agents core 的 `Realtime` 抽象，因此它的输出应该进入 core realtime event stream。
+
+当前 adapter 默认模型为 `qwen3.5-omni-plus-realtime`，TideSync 默认模型为 `qwen3.5-omni-flash-realtime`。当前 adapter 默认 base URL 为国际站 DashScope 地址，TideSync 默认 base URL 为中国内地 DashScope 地址。当前 adapter 默认音色为 `Cherry`，TideSync 默认音色为 `Tina`。
+
+这些默认值差异不是直接缺陷，但它们说明 TideSync 不能依赖上游 README 或 adapter 默认值表达自身目标。TideSync 必须明确运行时配置和验收模型。
+
+[#qwen-adapter-session-config.domain]
+=== 当前 session 配置
+
+当前 `connect()` 生成的 session config 包含 `modalities: ["text", "audio"]`、`voice`、`instructions`、`input_audio_format: "pcm16"`、`output_audio_format: "pcm24"`、`input_audio_transcription` 和 `turn_detection`。
+
+`turn_detection.type` 当前写死为 `server_vad`。VAD 参数包括 threshold、prefix padding 和 silence duration。adapter 没有配置入口表达 `semantic_vad`，也没有表达 Manual 模式。
+
+`input_audio_transcription` 当前默认模型为 `gummy-realtime-v1`。本地 Qwen3.5 文档和补充报告指向 `qwen3-asr-flash-realtime`。`gummy-realtime-v1` 在 Qwen3.5 上是否仍被宽容接受属于 live 未知，不能作为 Qwen3.5 合同默认值。
+
+[#qwen-adapter-client-events.domain]
+=== 当前客户端事件
+
+当前 client 能发送 `session.update`、`input_audio_buffer.append`、`input_audio_buffer.commit`、`input_image_buffer.append` 和 `response.cancel`。
+
+provider 层当前实际调用音频 append、图片 append 和 response cancel。provider 没有 Manual mode 控制流，因此当前 client 虽然有 `commit_audio()` sender，运行时没有合同驱动它按轮次使用。client 当前没有 `input_audio_buffer.clear`、`conversation.item.create` 或 `response.create` sender，因此无法完成 Manual 清理和工具调用结果回传。
+
+[#qwen-adapter-video-flow.domain]
+=== 当前视频发送
+
+当前 adapter 使用 Vision Agents `VideoForwarder` 按 FPS 抽取视频帧，将帧转为 JPEG 后发送 `input_image_buffer.append`。发送前检查 `_audio_emitted_once`。该字段在任意一次音频 append 后变为真。
+
+该行为只能阻止会话开始阶段先发图，不能表达 Qwen 当前输入轮次的图片发送许可。track 断开重连、speech stopped、committed、clear、服务端图片时序错误、下一轮用户输入都会改变服务端对图片 append 的接受条件；全局 once 布尔值不会随这些条件重置。
+
+[#qwen-adapter-server-events.domain]
+=== 当前服务端事件处理
+
+当前 event loop 处理以下事件：`error`、`session.created`、`response.created`、`response.output_item.added`、`response.done`、`input_audio_buffer.speech_started`、`response.audio.delta`、`conversation.item.input_audio_transcription.completed`、`response.audio_transcript.delta`。
+
+当前 event loop 没有处理：`session.updated`、`input_audio_buffer.speech_stopped`、`input_audio_buffer.committed`、`conversation.item.created`、`response.content_part.added`、`response.text.delta`、`response.text.done`、`response.audio_transcript.done`、`response.audio.done`、`response.content_part.done`、`response.output_item.done`、`response.function_call_arguments.delta`、`response.function_call_arguments.done`、`response.done.usage` 和搜索 usage。
+
+该事实说明当前 adapter 不是 Qwen3.5 Omni Realtime WebSocket contract 的完整投射。它只接入基础语音响应路径。
+
+[#qwen-adapter-interruption.domain]
+=== 当前打断处理
+
+当前 adapter 在收到 `input_audio_buffer.speech_started` 且 `_is_responding` 为真时调用 `_on_interruption()`。`_on_interruption()` 如果有当前 response id，则发送 `response.cancel`，然后把 `_is_responding`、`_current_response_id` 和 `_current_item_id` 清空。
+
+当前打断处理没有调用 `_emit_user_speech_started()`，没有发 `RealtimeAudioOutputDone(interrupted=True)`，没有发 `RealtimeAgentSpeechEnded(interrupted=True)`，没有触发 Vision Agents audio output flush，没有按 response id 或 epoch 屏蔽迟到 delta。
+
+因此，当前打断处理只覆盖远端取消的一部分，不覆盖本地可听输出和当前会话焦点的完整变换。
+
+[#qwen-adapter-tests.domain]
+=== 当前测试覆盖
+
+上游 Qwen plugin tests 主要是跳过的 integration tests，断言可以收到 `RealtimeAudioOutput`。它们没有覆盖 session config、semantic VAD、Manual、search、tools、usage、event mapping、interruption flush、audio done、transcript done、图像时序、错误恢复或 stale delta。
+
+当前测试覆盖不能作为完整 adapter 符合性的证据。

@@ -1,0 +1,5 @@
+TideSync 的实时全模态视频通话体验依赖一个事实链：用户通过 GetStream WebRTC 向 Vision Agents 提供音频和视频，Vision Agents Qwen adapter 通过 DashScope WebSocket 向 Qwen3.5 Omni Realtime 发送音频与图像，Qwen 服务端返回语音、文本、VAD、响应生命周期、工具、搜索、usage 和错误事件，Vision Agents core 再把这些事件变成可听输出、会话状态、字幕、消息、错误和打断控制。
+
+当前缺陷不在于 Qwen3.5 Omni Realtime 没有实时全模态能力，也不在于 Vision Agents core 完全没有承载结构。缺陷在于上游 Vision Agents v0.6.4 的 Qwen adapter 只接入基础 WebSocket 语音视频路径，没有完整承担 Qwen3.5 Omni Realtime WebSocket contract，也没有把关键服务端事件完整投射到 Vision Agents core。
+
+本书的写作目标，是把“原生支持 Qwen3.5 Omni Realtime”从一句愿望转化为可审查契约。契约必须能失败。契约失败时，开发者不能用一次演示成功、模型官方能力、日志打印、外部 fork 或“后续优化”抵消。

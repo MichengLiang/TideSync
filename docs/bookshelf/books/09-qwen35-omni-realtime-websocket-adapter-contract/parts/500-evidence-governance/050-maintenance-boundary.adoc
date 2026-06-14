@@ -1,0 +1,25 @@
+[#maintenance-boundary.contract]
+== 维护边界
+
+维护边界定义本书如何在后续开发、上游同步和范围扩展中保持有效。
+
+[#book-update-contract.contract, normative=must]
+=== 书稿更新
+
+当官方 Qwen contract、Vision Agents core 抽象、TideSync 运行路径或团队 PR 规则发生变化时，本书必须更新相应事实、合同、断言和未知项。不能只改代码不改契约。
+
+书稿更新必须维护 cross reference、role、rel 和 normative 字段。新增断言必须进入覆盖映射。
+
+[#scope-extension-contract.contract, normative=must]
+=== 范围扩展
+
+Qwen 原生 WebRTC、声音复刻创建、图片输出、视频输出、长期记忆和多模型路由进入实现前，必须先形成对应对象定义和验收合同。它们不能以“顺手支持”的方式污染当前 WebSocket adapter。
+
+若扩展能力依赖当前 WebSocket adapter，扩展合同必须说明依赖关系和不变量。
+
+[#deprecation-contract.contract, normative=should]
+=== 上游替换
+
+当上游 Vision Agents 新版本声称已修复 Qwen adapter 时，TideSync 可以评估替换本地派生。替换必须经过本书断言测试。上游版本通过全部核心断言后，TideSync 才能移除或缩减本地派生源码。
+
+上游版本未通过核心断言时，不能因为 release note 声称支持 Qwen 而替换本地 contract。

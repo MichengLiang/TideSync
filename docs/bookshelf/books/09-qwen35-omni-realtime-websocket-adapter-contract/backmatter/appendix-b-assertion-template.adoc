@@ -1,0 +1,28 @@
+[#appendix-assertion-template]
+= 附录 B：断言模板
+
+Adapter 层断言使用以下模板。
+
+[source,asciidoc]
+----
+[#stable-assertion-id.assertion, normative=must]
+=== 读者可见断言标题
+
+前置状态:: adapter、TideSync 运行时、Qwen fake server 或真实服务在动作发生前的状态。
+
+输入事件或动作:: Qwen 服务端事件、用户动作、测试注入事件或配置动作。
+
+期望 adapter 行为:: adapter 必须更新的状态、产生的输出、保留的字段或执行的发送动作。
+
+期望 core 投影:: Vision Agents core 应收到的 Realtime 事件、turn 事件、audio output 或 error 投影。
+
+期望 client 事件:: adapter 应向 Qwen WebSocket 发送的客户端事件。
+
+不符合表现:: 会导致断言失败的典型行为。
+
+证据要求:: 测试、event replay、fake websocket 记录、import 路径、PR diff 或 live smoke 证据。
+
+覆盖对象:: xref:target-contract-id[目标契约标题, rel=verifies]。
+----
+
+断言标题表达行为判定。断言正文不使用无法观察的内部心理状态，也不把实现步骤冒充对象要求。

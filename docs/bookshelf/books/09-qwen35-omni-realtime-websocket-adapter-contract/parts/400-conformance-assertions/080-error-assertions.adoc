@@ -1,0 +1,80 @@
+[#error-assertions.assertion]
+== 错误断言
+
+错误断言验证 adapter 是否把错误作为状态处理，而不是只写日志。
+
+[#qwen-error-keeps-structured-fields.assertion, normative=must]
+=== Qwen Error 保留结构化字段
+
+前置状态:: adapter 已连接。
+
+输入事件或动作:: fake server 发送 `error`，包含 event_id、type、code、message、param。
+
+期望 adapter 行为:: 保留结构化字段，并进入对应错误状态。
+
+期望 core 投影:: LLMErrorEvent、metadata、测试对象或等价投影可读取结构化字段。
+
+期望 client 事件:: 无。
+
+不符合表现:: 只构造 `Exception(str(error))`；丢失 code 或 param；错误无法被测试断言读取。
+
+证据要求:: error event replay 测试。
+
+覆盖对象:: xref:structured-error-contract[结构化错误, rel=verifies]。
+
+[#recoverable-connection-resets-state.assertion, normative=must]
+=== 可恢复连接错误重置状态
+
+前置状态:: adapter 正在响应，存在当前 response、输入轮次和视频发送许可。
+
+输入事件或动作:: fake WebSocket 触发可恢复 close code。
+
+期望 adapter 行为:: 进入 reconnecting；清理或隔离旧 response、旧输入轮次和旧视频许可；重连后重新发送 session.update。
+
+期望 core 投影:: 连接状态变化可观察。
+
+期望 client 事件:: 重连后发送新的 `session.update`。
+
+不符合表现:: 重连后沿用旧 response id；继续发送旧轮次图片；旧音频继续播放；没有重新 session.update。
+
+证据要求:: reconnect fake WebSocket 测试。
+
+覆盖对象:: xref:recoverability-contract[可恢复性, rel=verifies]。
+
+[#session-config-error-fails-session.assertion, normative=must]
+=== Session 配置错误使会话不可用
+
+前置状态:: adapter 发送 `session.update`。
+
+输入事件或动作:: fake server 返回 session 参数错误。
+
+期望 adapter 行为:: 配置状态进入 rejected_config；会话状态进入 failed 或受限不可用；结构化错误保留。
+
+期望 core 投影:: 错误事件可观察；不得投影 connected-ready 状态。
+
+期望 client 事件:: 不继续发送音频、图片或 response.create。
+
+不符合表现:: session.update 出错后仍继续发送媒体；错误只打印日志；TideSync 误以为 realtime 可用。
+
+证据要求:: session error replay 测试。
+
+覆盖对象:: xref:structured-error-contract[结构化错误, rel=verifies]；xref:session-state[会话状态, rel=verifies]。
+
+[#usage-parse-error-retains-raw.assertion, normative=should]
+=== Usage 解析失败保留 Raw Payload
+
+前置状态:: adapter 收到 response.done。
+
+输入事件或动作:: fake server 返回格式异常但存在 usage 字段的 payload。
+
+期望 adapter 行为:: usage 状态进入 usage_parse_failed；raw usage 保留；偏离可记录。
+
+期望 core 投影:: 测试对象、metadata 或符合性声明可读取 raw payload。
+
+期望 client 事件:: 无。
+
+不符合表现:: usage 解析异常导致 reader 崩溃；raw payload 丢失；失败沉默。
+
+证据要求:: malformed usage replay 测试。
+
+覆盖对象:: xref:usage-error-contract[Usage 错误, rel=verifies]。

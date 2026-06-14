@@ -1,0 +1,80 @@
+[#adapter-interruption-assertions.assertion]
+== 打断断言
+
+打断断言验证 Qwen speech_started 是否改变远端 response、本地音频、旧响应和 turn 焦点。
+
+[#speech-started-interrupts-current-response.assertion, normative=must]
+=== Speech Started 中断当前响应
+
+前置状态:: 当前 response `resp_1` 正在输出音频；本地 audio output 处于 streaming。
+
+输入事件或动作:: fake server 发送 `input_audio_buffer.speech_started`。
+
+期望 adapter 行为:: 当前 response 标记为 interrupted 或 cancelled；用户 turn started；本地音频状态进入 audio_interrupted；旧 response 后续 delta 被隔离。
+
+期望 core 投影:: emit `RealtimeUserSpeechStarted`；emit `RealtimeAudioOutputDone(interrupted=True)` 或等价 flush 触发对象；emit `RealtimeAgentSpeechEnded(interrupted=True)` 或等价 agent turn interrupted。
+
+期望 client 事件:: 若存在可取消 response，发送 `response.cancel`。
+
+不符合表现:: 只发送 response.cancel；只清私有变量；本地 audio flush 不触发；旧音频继续播放；没有用户 turn started；旧 response delta 继续进入输出。
+
+证据要求:: barge-in event replay，core output 捕获，fake client send log。
+
+覆盖对象:: xref:interruption-contract[打断契约, rel=verifies]。
+
+[#cancel-error-does-not-block-local-flush.assertion, normative=must]
+=== Cancel Error 不阻止本地 Flush
+
+前置状态:: adapter 已进入打断路径并发送 `response.cancel`。
+
+输入事件或动作:: fake server 返回无可取消响应的 `error`。
+
+期望 adapter 行为:: 记录结构化 cancel error；保持本地打断收敛；旧 response 仍被隔离。
+
+期望 core 投影:: 本地 flush 已触发或继续保持；错误事件可观察。
+
+期望 client 事件:: 已发送 `response.cancel`。
+
+不符合表现:: cancel error 导致 flush 被撤销；旧音频继续播放；错误只出现在日志字符串；adapter 回到正常响应状态。
+
+证据要求:: cancel error replay 测试。
+
+覆盖对象:: xref:remote-cancel-contract[远端取消, rel=verifies]；xref:error-contract[错误契约, rel=verifies]。
+
+[#stale-delta-after-interrupt-blocked.assertion, normative=must]
+=== 打断后旧 Delta 被屏蔽
+
+前置状态:: response `resp_1` 已被打断；新输入轮次已开始。
+
+输入事件或动作:: fake server 迟到发送 `resp_1` 的 `response.audio.delta` 和 `response.audio_transcript.delta`。
+
+期望 adapter 行为:: 识别这些事件属于旧 response；不把它们投射为当前可播放输出或完整 transcript。
+
+期望 core 投影:: 不出现针对旧 response 的新 `RealtimeAudioOutput`；不出现补全旧回答的 agent transcript。
+
+期望 client 事件:: 无。
+
+不符合表现:: 旧回答停止后又继续出声；字幕继续补全被打断内容；旧 response 被当成新 response。
+
+证据要求:: delayed delta replay 测试。
+
+覆盖对象:: xref:stale-response-contract[旧响应隔离, rel=verifies]。
+
+[#interruption-latency-measured.assertion, normative=should]
+=== 打断响应性被测量
+
+前置状态:: 真实或集成 smoke 环境中 agent 正在说话。
+
+输入事件或动作:: 用户开口打断。
+
+期望 adapter 行为:: 记录 speech_started 到 flush 触发对象的事件差；记录旧可听输出停止或失去会话支配地位的观察结果。
+
+期望 core 投影:: 可观察 flush 或 interrupted audio done。
+
+期望 client 事件:: 可观察 response.cancel 或无可取消 response 的结构化错误。
+
+不符合表现:: PR 只写“打断很快”；没有测量起点和终点；用固定毫秒数但无来源；只记录 response.cancel 耗时，不记录本地音频停止。
+
+证据要求:: smoke 日志、事件时间戳和偏离声明。
+
+覆盖对象:: xref:interruption-latency-contract[响应性测量, rel=verifies]。

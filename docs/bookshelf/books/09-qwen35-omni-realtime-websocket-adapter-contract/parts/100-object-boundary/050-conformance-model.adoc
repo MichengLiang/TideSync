@@ -1,0 +1,54 @@
+[#conformance-model.contract]
+== 符合性模型
+
+符合性模型说明一个实现如何被判定为满足本书对象。符合性来自源码身份、运行路径、contract 覆盖、测试证据和公开偏离的共同成立。
+
+[#core-conformance.contract, normative=must]
+=== 核心符合
+
+一个实现只有同时满足以下条件，才能声明核心符合。
+
+第一，TideSync PR 中包含受控 Qwen adapter 派生源码、依赖解析修改、测试和本书要求的符合性声明。
+
+第二，运行时 import 路径证明 TideSync 加载的是 PR 中的 adapter 源码。
+
+第三，adapter 配置、客户端事件、服务端事件、状态机、打断、音频输出、转写、工具、搜索、usage 和错误处理覆盖本书 `must` 合同。
+
+第四，核心断言全部通过。失败断言不能被演示成功、日志输出、模型官方能力或开发者说明抵消。
+
+第五，所有未知项、未实现扩展和偏离项进入符合性声明。
+
+[#strong-conformance.contract, normative=should]
+=== 强要求偏离
+
+`normative=should` 的要求用于约束强体验和强维护能力。失败时，实现不能沉默通过，必须在 PR 符合性声明中写明偏离、影响、证据和修复条件。
+
+强要求偏离不自动取消核心符合，但会影响项目负责人对交付质量、上线范围和风险承受的判断。
+
+[#extension-conformance.contract, normative=may]
+=== 扩展能力符合
+
+`normative=may` 的要求只在实现声明扩展能力时适用。未声明 Qwen 原生 WebRTC、声音复刻创建、图片输出或视频输出时，这些能力不作为当前对象失败项。
+
+实现一旦声明扩展能力，该能力必须接受本书或对应扩展书稿的断言验收。扩展声明不能只停留在 README、演示或配置开关。
+
+[#nonconformance-model.contract]
+=== 不符合判定
+
+以下情况构成不符合。
+
+代码只存在于 external、site-packages、本机路径或外部 fork，未进入 TideSync PR。
+
+TideSync 运行时仍加载上游 PyPI Qwen adapter。
+
+adapter 只连接 WebSocket 或只播放音频，却没有覆盖 Qwen WebSocket lifecycle 和 Vision Agents core 投射。
+
+打断只发送 `response.cancel`，没有本地音频 flush、旧响应隔离和 turn 状态重定向。
+
+response 完成只依赖队列自然耗尽，没有 `RealtimeAudioOutputDone` 或等价完成边界。
+
+工具、搜索、usage 或错误事件被日志吞掉，未进入结构化事件、状态或证据。
+
+测试只包含真实通话演示，没有 event replay、fake WebSocket、配置断言、状态断言和运行路径断言。
+
+未知项被写成已完成能力。

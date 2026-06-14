@@ -1,0 +1,46 @@
+[#appendix-conformance-checklist]
+= 附录 A：符合性检查表
+
+本检查表供 PR 作者、评审者和 QA 使用。
+
+== 源码与运行路径
+
+* [ ] Qwen adapter 派生源码进入 TideSync 仓库。
+* [ ] PR diff 可见主要源码修改。
+* [ ] 受控源码目录包含上游来源说明。
+* [ ] 依赖解析指向受控源码。
+* [ ] import 路径测试证明运行时加载受控 adapter。
+
+== 配置与事件
+
+* [ ] `session.update` 使用 Qwen3.5 合同字段。
+* [ ] `server_vad`、`semantic_vad` 和 WebSocket Manual 可表达。
+* [ ] tools 与 search 互斥被配置层处理。
+* [ ] 客户端事件集合完整实现。
+* [ ] 服务端事件集合完整处理。
+
+== 状态与打断
+
+* [ ] 输入音频状态按轮次维护。
+* [ ] 视频发送许可按轮次维护。
+* [ ] response state 绑定 response id。
+* [ ] audio done 形成 output done。
+* [ ] speech_started 触发用户 turn、本地 flush、远端 cancel 和旧 response 隔离。
+
+== 工具、搜索、usage、错误
+
+* [ ] ToolSchema 映射为 Qwen tools。
+* [ ] function call 执行并回传结果。
+* [ ] search 配置发送且 usage.plugins.search 保留。
+* [ ] response.done usage 保留 raw payload。
+* [ ] Qwen error 保留结构化字段并影响状态。
+
+== 证据
+
+* [ ] 静态配置测试通过。
+* [ ] event replay 测试通过。
+* [ ] fake WebSocket 测试通过。
+* [ ] 状态机测试通过。
+* [ ] error injection 测试通过。
+* [ ] PR 符合性声明完整。
+* [ ] live smoke 已执行或阻塞原因已登记。

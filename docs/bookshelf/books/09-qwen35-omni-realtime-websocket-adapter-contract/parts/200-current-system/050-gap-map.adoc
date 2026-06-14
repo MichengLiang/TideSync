@@ -1,0 +1,60 @@
+[#gap-map.domain]
+== 缺口图
+
+缺口来自官方 contract、TideSync 当前运行路径、Vision Agents adapter 当前行为和 core 承载物之间的对比。缺口不是实现任务顺序；缺口是当前对象不符合原生支持定义的事实位置。
+
+[#source-gap.domain]
+=== 源码与运行路径缺口
+
+TideSync 当前没有受控 Vision Agents Qwen adapter 派生源码。运行时依赖上游包。external 中的 Vision Agents clone 可以作为证据来源，不能作为 TideSync 完成物。
+
+缺口影响：开发者即使在 external 或 site-packages 中修改 adapter，也不能让 TideSync PR 获得可审查、可追责的完成证据。
+
+[#session-config-gap.domain]
+=== 会话配置缺口
+
+当前 adapter 使用 `pcm16`、`pcm24`、`gummy-realtime-v1` 和写死 `server_vad`。官方合同和本地补充报告要求将 `pcm`、Qwen3.5 转写模型、`server_vad`、`semantic_vad`、Manual、搜索、工具和互斥规则纳入配置判断。
+
+缺口影响：adapter 不能表达 Qwen3.5 的官方配置面，也不能让 TideSync 对关键能力进行可审查配置。
+
+[#input-turn-gap.domain]
+=== 输入轮次与视频时序缺口
+
+当前 `_audio_emitted_once` 不能表达当前输入轮次。Qwen 图片输入要求绑定本轮音频和 speech window。track 重连、speech stopped、commit、clear 和错误恢复都会改变图片发送合法性。
+
+缺口影响：adapter 可能在服务端认为当前轮次尚未有音频时继续发送图片，造成 `append image before append audio` 类错误，并让视觉现场与用户语音轮次错位。
+
+[#event-mapping-gap.domain]
+=== 事件映射缺口
+
+当前 adapter 没有完整处理 Qwen 服务端事件。用户 speech ended、input committed、audio done、audio transcript done、text delta/done、content part done、output item done、function call、usage 和 search usage 都未被映射。
+
+缺口影响：Vision Agents core 无法观察完整用户 turn、agent turn、音频完成、转写完成、工具调用、搜索计量和响应边界。
+
+[#interruption-gap.domain]
+=== 打断缺口
+
+当前 adapter 在 speech_started 时只在特定状态下发送 response.cancel，并清私有变量。它没有触发本地 audio flush，没有发 interrupted audio done，没有隔离旧 response delta，没有完整重定向用户 turn 和 agent turn。
+
+缺口影响：用户可听层面可能继续听到旧回答；旧回答可能继续进入 transcript 或 conversation；新输入不能可靠成为当前焦点。
+
+[#tools-search-usage-gap.domain]
+=== 工具、搜索与 usage 缺口
+
+当前 adapter 不注入 tools，不处理 function call 事件，不回传 function_call_output，不发送工具后的 response.create。当前 adapter 不配置 enable_search 和 search_options，不解析 usage.plugins.search，不执行 tools 与 search 互斥规则。
+
+缺口影响：Qwen3.5 的工具和联网搜索能力不能穿透到 TideSync；成本和搜索计量无法审查；错误配置可能被推迟到服务端报错。
+
+[#error-gap.domain]
+=== 错误语义缺口
+
+当前 adapter 对 Qwen `error` 事件只生成通用 Exception 字符串。结构化 error.type、code、message、param 和 event_id 没有进入公共错误对象。错误对状态机的影响没有定义。
+
+缺口影响：QA 无法判断错误是否被正确处理，维护者无法区分参数错误、输入时序错误、工具错误、搜索互斥错误、连接错误和未知服务端错误。
+
+[#test-gap.domain]
+=== 测试证据缺口
+
+当前没有覆盖 Qwen adapter contract 的单元测试、event replay 测试、fake WebSocket 测试、状态机测试、TideSync import 路径测试、工具搜索测试和错误注入测试。
+
+缺口影响：开发者可以用真实通话成功或模型能力说明替代可重复证据，QA 无法逐条判定实现是否完整。

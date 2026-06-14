@@ -1,0 +1,3 @@
+本书属于 {series-name}。
+
+源格式为 {source-format}。书稿以稳定 ID、role、rel 和 `normative` 字段表达可维护的规约结构。

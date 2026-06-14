@@ -1,0 +1,43 @@
+[#vision-agents-core-carriers.domain]
+== Vision Agents Core 承载物
+
+Vision Agents core 已经提供多个可承载 Qwen Realtime contract 的对象。adapter 目标不是绕开 core，而是把 Qwen 事件投射到这些承载物，并在承载物不足时定义扩展契约。
+
+[#core-realtime-events.domain]
+=== Realtime 输出事件
+
+Core `Realtime` 抽象定义以下输出事件：`RealtimeAudioOutput`、`RealtimeAudioOutputDone`、`RealtimeUserTranscript`、`RealtimeAgentTranscript`、`RealtimeUserSpeechStarted`、`RealtimeUserSpeechEnded`、`RealtimeAgentSpeechStarted`、`RealtimeAgentSpeechEnded`。
+
+这些事件提供了 Qwen 服务端事件进入 Vision Agents flow 的公共表面。Qwen adapter 不需要把 speech started、speech stopped、audio done 或 agent speech ended 写成私有日志；core 已经有可消费对象。
+
+[#core-inference-flow.domain]
+=== RealtimeInferenceFlow 消费语义
+
+`RealtimeInferenceFlow` 消费 `RealtimeAudioOutput` 时，将音频写入 `AudioOutputStream`。消费 `RealtimeAudioOutputDone(interrupted=False)` 时，发送 final audio chunk。消费 `RealtimeAudioOutputDone(interrupted=True)` 时，调用 interrupt。
+
+`RealtimeInferenceFlow` 消费用户 speech started/ended 时，发送 `UserTurnStartedEvent` 和 `UserTurnEndedEvent`。消费 agent speech started/ended 时，发送 `AgentTurnStartedEvent` 和 `AgentTurnEndedEvent`。消费 transcript 事件时，同步到 conversation。
+
+这些消费语义说明，Qwen adapter 只要正确 emit core 事件，就能让已有 flow 产生用户 turn、agent turn、音频输出、音频 final、打断 flush 和 transcript 投影。
+
+[#core-interrupt-carrier.domain]
+=== 本地音频 flush 承载物
+
+`RealtimeInferenceFlow.interrupt()` 会调用 LLM interrupt、flush agent transcript、flush user transcripts、清空 `AudioOutputStream` 并发送 `AudioOutputFlush`。Agent audio producer 收到 `AudioOutputFlush` 后调用 GetStream audio track flush。
+
+这个路径是当前本地播放打断的承载物。Qwen adapter 需要通过 `RealtimeAudioOutputDone(interrupted=True)` 或等价公共事件触发它。只发送 Qwen `response.cancel` 不能触发本地音频队列 flush。
+
+[#core-function-registry.domain]
+=== 工具执行承载物
+
+Core `FunctionRegistry` 能注册 async 函数，生成 `ToolSchema`，并通过 `call_function(name, arguments)` 执行工具。`ToolSchema` 包含工具名、描述和 JSON schema 参数。
+
+Qwen 工具调用需要一个 provider 映射层：把 core `ToolSchema` 转成 Qwen `session.update.session.tools`；把 Qwen `response.function_call_arguments.done` 转成 registry 调用；把执行结果转成 Qwen `conversation.item.create` 的 `function_call_output`；再发送 `response.create` 触发最终回答。
+
+这个事实说明工具执行模型不需要从零发明，但 Qwen protocol 映射必须进入 adapter。
+
+[#core-limitations.domain]
+=== Core 表达限制
+
+Core 已有承载物不能自动覆盖全部 Qwen contract。usage.plugins.search、结构化 Qwen error、response content part 状态、工具调用中间状态、Qwen-specific session config、input buffer 状态和视频发送许可，都需要 adapter 内部状态、metrics 扩展或新事件表面表达。
+
+当 core 需要扩展时，扩展必须服务明确消费者。消费者可以是 RealtimeInferenceFlow、TideSync 配置、QA 测试、metrics、PR 符合性声明或维护者。没有消费者动作的新增事件不是合格设计点。

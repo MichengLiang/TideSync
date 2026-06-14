@@ -1,0 +1,52 @@
+[#session-config-contract.contract]
+== Session 配置契约
+
+Session 配置契约定义 adapter 发送给 Qwen 的 `session.update.session` 对象。该对象是 Qwen WebSocket 会话的公共合同，不是 provider 私有默认值。
+
+[#model-region-contract.contract, normative=must]
+=== 模型与连接
+
+Adapter 必须显式支持 `qwen3.5-omni-flash-realtime` 作为 TideSync 默认模型。`qwen3.5-omni-plus-realtime` 可以作为同族兼容模型进入配置和值域，但不能替代 TideSync 默认目标。
+
+Adapter 必须支持中国内地 DashScope WebSocket 地址作为 TideSync 默认 base URL，并保留通过配置选择其他官方地域 endpoint 的能力。连接 URL 必须把模型作为 query 参数传给 Qwen WebSocket endpoint。
+
+[#modalities-voice-instructions-contract.contract, normative=must]
+=== 输出模态、音色与指令
+
+Adapter 必须支持 `modalities: ["text", "audio"]`，因为 TideSync 08 号体验要求自然语音回应，并需要文本投影支撑字幕和会话记录。若 adapter 声明支持 text-only 模式，必须处理 `response.text.delta` 和 `response.text.done`；未声明 text-only 模式时，该模式不进入核心符合判断。
+
+Adapter 必须把 `voice` 作为会话配置字段发送。`voice` 可以是官方音色名，也可以是声音复刻外部 API 返回的专属音色名。声音复刻创建过程不属于当前 WebSocket 会话 contract。
+
+Adapter 必须发送 TideSync agent instructions。instructions 是模型行为约束的一部分，不能在派生 adapter 中丢失。
+
+[#audio-format-contract.contract, normative=must]
+=== 音频格式
+
+Adapter 的合同配置必须以官方原生 JSON 字段为准：`input_audio_format` 和 `output_audio_format` 使用 `pcm`。输入音频数据流承担 16 kHz 单声道 PCM 约束；输出音频事件按 24 kHz PCM 解码。
+
+当前上游 adapter 使用 `pcm16` 和 `pcm24`。服务端是否宽容接受这两个字符串属于 live 兼容性未知。符合实现不得把宽容兼容写成合同默认值，除非提供官方补充或 live 验证证据，并在兼容性说明中登记。
+
+[#input-transcription-contract.contract, normative=must]
+=== 输入转写
+
+Adapter 必须启用 `input_audio_transcription`，因为 TideSync 需要用户 transcript 投影支撑会话记录和验收观察。Qwen3.5 合同默认转写模型必须以本地官方文档和在线文档为准登记。
+
+当官方文档冲突或 live 兼容性未知时，adapter 配置必须把合同目标和兼容性未知分开表达。旧示例中的 `gummy-realtime-v1` 不能在没有 Qwen3.5 证据时作为合同默认值。
+
+[#turn-detection-contract.contract, normative=must]
+=== Turn Detection
+
+Adapter 必须表达三种 WebSocket turn detection 状态：`server_vad`、`semantic_vad` 和 Manual `null`。`server_vad` 与 `semantic_vad` 共享 VAD 服务端事件处理；Manual 使用显式 commit 和 response create。
+
+`semantic_vad` 必须作为 Qwen3.5 推荐配置进入可配置值域。实现可以选择默认值，但默认值必须在 TideSync 配置说明和测试中可见，不能被写死在 provider 内部。
+
+Manual 只属于 WebSocket adapter 当前对象。WebRTC Manual 不属于当前对象，因为官方 WebRTC 仅支持 VAD。
+
+[#tools-search-config-contract.contract, normative=must]
+=== Tools 与 Search 配置
+
+Adapter 必须能把 Vision Agents `ToolSchema` 映射为 Qwen `session.update.session.tools`。Qwen 工具定义必须使用 `{"type":"function","function":{...}}` 形状。
+
+Adapter 必须能表达 `enable_search` 和 `search_options.enable_source`。当 `tools` 非空时，adapter 不得同时启用 `enable_search`。互斥应在配置层被拒绝或形成结构化错误，不能把明显非法配置推迟到服务端失败。
+
+Adapter 不得向 Qwen-Omni-Realtime 发送 `tool_choice` 或 `parallel_tool_calls`。

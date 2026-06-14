@@ -1,0 +1,44 @@
+[#interruption-contract.contract]
+== 打断契约
+
+打断契约定义用户在 agent 回答期间重新取得交互控制权时，adapter 必须执行的状态变换。打断不是单个事件，也不是单个客户端请求。
+
+[#interruption-trigger-contract.contract, normative=must]
+=== 打断触发
+
+当 adapter 收到 Qwen `input_audio_buffer.speech_started`，必须 emit `RealtimeUserSpeechStarted`。如果当前存在 agent response、agent audio output、未完成 transcript 或本地仍可能播放的旧音频，adapter 必须进入打断路径。
+
+打断路径不得依赖 `_is_responding` 这类单一布尔值。打断判断必须考虑 response state、本地音频输出状态和旧 response 迟到 delta 风险。
+
+[#remote-cancel-contract.contract, normative=must]
+=== 远端取消
+
+打断路径必须在存在可取消 response 时发送 `response.cancel`。无可取消 response 时，adapter 不得阻止本地打断收敛；若服务端返回 cancel error，应记录结构化错误，并继续完成本地 flush 和旧 response 隔离。
+
+[#local-flush-contract.contract, normative=must]
+=== 本地音频 Flush
+
+打断路径必须向 Vision Agents core 发出 `RealtimeAudioOutputDone(interrupted=True)` 或等价公共事件，使 `RealtimeInferenceFlow.interrupt()` 清理 transcript、AudioOutputStream 和下游 GetStream audio track buffer。
+
+本地音频 flush 是打断成立的必要控制语义。只发送 `response.cancel` 不满足本书打断契约。
+
+[#stale-response-contract.contract, normative=must]
+=== 旧响应隔离
+
+打断路径必须把当前 response id 标记为 cancelled 或 interrupted。之后到达的同一 response 的 `response.audio.delta`、`response.audio_transcript.delta`、`response.text.delta` 和 completion 事件不得作为当前可播放输出或完整回答继续投影。
+
+官方文档没有保证 `response.cancel` 后旧 delta 绝不抵达。adapter 必须以 response id、epoch 或等价机制提供 stale event 防护。
+
+[#turn-redirection-contract.contract, normative=must]
+=== Turn 重定向
+
+打断路径必须 emit `RealtimeAgentSpeechEnded(interrupted=True)` 或等价 agent turn ended 事件，并让用户新输入成为当前焦点。被打断回答中未完成或未播放内容不得被当作用户已经接收的完整交流内容。
+
+打断完成不要求立即给出最终新答案。打断完成要求旧回答停止或失去会话支配地位，用户新输入进入听取、处理或新响应路径。
+
+[#interruption-latency-contract.contract, normative=should]
+=== 响应性测量
+
+实现应记录从 `input_audio_buffer.speech_started` 到本地 flush 触发对象之间的时间差，并在真实通话 smoke 中记录用户可听旧回答停止的观察结果。
+
+本书不把固定毫秒数写成核心阈值。数值阈值只有在项目定义产品 SLO、测量起点、测量终点、网络条件和设备条件后，才能进入符合性声明。
