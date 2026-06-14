@@ -16,6 +16,10 @@ The Qwen adapter no longer uses historical `_audio_emitted_once` as the video ga
   - Adds fake-client/event tests for current-turn image gating, speech event projection, Manual commit/clear, committed server event, track reconnect, and image timing error suspension.
 - `docs/qwen35-omni-adapter-contract/reports/batch-02-input-turn-and-video-send-permission-state.md`
   - Records assertion results, verification commands, blockers, and non-goals.
+- `docs/qwen35-omni-adapter-contract/reports/batch-02-input-turn-and-video-send-permission-state-review.md`
+  - Records the independent review result for final reviewed HEAD `8b5423c`.
+- `docs/qwen35-omni-adapter-contract/coordinator-state.md`
+  - Records the coordinator promotion decision and next batch boundary.
 
 ## Repository Rationale
 
@@ -43,6 +47,9 @@ This PR belongs in the controlled fork because the 09 contract requires Qwen ada
   - Result: `All checks passed!`
 - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - Result: `3 files already formatted`.
+- Independent review:
+  - Result: `APPROVED_WITH_NOTES`.
+  - Report: `forks/vision-agents-qwen-native/docs/qwen35-omni-adapter-contract/reports/batch-02-input-turn-and-video-send-permission-state-review.md`.
 
 ## Live Verification / Blockers
 

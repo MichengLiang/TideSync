@@ -62,7 +62,7 @@ Batch 01, review accepted:
   - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
-Batch 02, next dispatch:
+Batch 02, review accepted:
 
 - Name: `batch-02-input-turn-and-video-send-permission-state`
 - Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-02-input-turn-and-video-send-permission-state.md`
@@ -73,10 +73,26 @@ Batch 02, next dispatch:
 - Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-02-input-turn-and-video-send-permission-state.md`
 - Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-02-builder-dispatch-prompt.md`
 - Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-02-reviewer-dispatch-prompt.md`
+- Implementation commit: `e6c9fb9 feat: implement Qwen input turn video permission state`
+- Reviewed final HEAD: `8b5423c69f0c67f6414dabb18f0579f4c0951c4e`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-02-input-turn-and-video-send-permission-state-review.md`
+- Promotion decision: Batch 02 may be promoted. Non-blocking notes are that committed state is projected as `committed` rather than distinct `waiting_response`, and deterministic tests call provider hooks rather than the real `VideoForwarder` timing loop.
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+
+Batch 03, next dispatch:
+
+- Name: `batch-03-server-event-mapping-speech-audio-transcript-usage`
+- Owner role: persistent builder subagent after Batch 02 promotion is closed.
+- Expected branch: to be assigned in a Batch 03 handoff.
+- Required coordinator work before dispatch: create Batch 03 handoff and review package from the server event contract, event mapping assertions, usage contract, and test evidence sections.
 
 Future batches, not yet dispatched:
 
-- Batch 03: server event mapping for speech, audio done, transcript done, and usage.
 - Batch 04: interruption path, local flush, stale response isolation, and cancel error behavior.
 - Batch 05: tools execution, search usage, and structured tool errors.
 - Batch 06: structured Qwen errors, reconnect state reset, evidence closure, and full PR conformance statement.
