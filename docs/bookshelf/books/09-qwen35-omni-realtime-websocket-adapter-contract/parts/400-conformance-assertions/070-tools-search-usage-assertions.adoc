@@ -52,7 +52,7 @@
 
 期望 core 投影:: 结构化错误可观察。
 
-期望 client 事件:: 根据错误策略发送 function_call_output 和 response.create，或发送明确终止/错误投影。
+期望 client 事件:: 发送 function_call_output 和 response.create；只有在错误合同明确要求终止 response、且对应测试断言覆盖该终止路径时，才允许不发送工具结果。
 
 不符合表现:: 工具调用永久 pending；WebSocket reader 阻塞；错误只打印日志；模型永远等不到工具结果。
 

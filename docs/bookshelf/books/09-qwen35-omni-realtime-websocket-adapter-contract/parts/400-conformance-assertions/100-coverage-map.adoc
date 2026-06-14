@@ -32,10 +32,10 @@
 |video fake forwarder、error injection
 
 |工具、搜索、usage
-|xref:tool-schema-sent-in-session-update[Tool Schema 注入 Session Update]；xref:function-call-executes-and-returns-output[Function Call 执行并回传结果]；xref:search-config-sent-and-usage-retained[Search 配置发送且 Usage 保留]；xref:response-done-parses-usage[Response Done 解析 Usage]
+|xref:tool-schema-sent-in-session-update[Tool Schema 注入 Session Update]；xref:function-call-executes-and-returns-output[Function Call 执行并回传结果]；xref:tool-error-returns-explainable-output[工具错误回传可解释结果]；xref:search-config-sent-and-usage-retained[Search 配置发送且 Usage 保留]；xref:response-done-parses-usage[Response Done 解析 Usage]；xref:usage-parse-error-retains-raw[Usage 解析失败保留 Raw Payload]
 |function call replay、search usage fixture
 
 |错误
-|xref:qwen-error-keeps-structured-fields[Qwen Error 保留结构化字段]；xref:recoverable-connection-resets-state[可恢复连接错误重置状态]；xref:session-config-error-fails-session[Session 配置错误使会话不可用]
+|xref:qwen-error-keeps-structured-fields[Qwen Error 保留结构化字段]；xref:recoverable-connection-resets-state[可恢复连接错误重置状态]；xref:session-config-error-fails-session[Session 配置错误使会话不可用]；xref:usage-parse-error-retains-raw[Usage 解析失败保留 Raw Payload]
 |error replay、reconnect fake WebSocket
 |===

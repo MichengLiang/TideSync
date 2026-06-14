@@ -22,7 +22,9 @@ Adapter 层断言使用以下模板。
 
 证据要求:: 测试、event replay、fake websocket 记录、import 路径、PR diff 或 live smoke 证据。
 
-覆盖对象:: xref:target-contract-id[目标契约标题, rel=verifies]。
+覆盖对象:: 使用真实存在的目标契约 ID 写作，例如 `xref:actual-contract-id[目标契约标题, rel=verifies]`。
 ----
+
+模板中的 `actual-contract-id` 是占位符，不是本书锚点。正式断言必须替换为本书内真实存在的契约、状态或要求标题。
 
 断言标题表达行为判定。断言正文不使用无法观察的内部心理状态，也不把实现步骤冒充对象要求。

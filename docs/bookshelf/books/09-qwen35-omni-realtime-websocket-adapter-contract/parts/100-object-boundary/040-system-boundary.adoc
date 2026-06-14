@@ -13,7 +13,7 @@
 [#runtime-source-boundary.boundary]
 === 运行源码边界
 
-当前对象的可修改源码必须在 TideSync 仓库内可审查。目录名可以表达其上游派生身份，例如 `forks/vision-agents-qwen-native`；无论目录名如何，以下边界不变：源码不得只存在于 external，不得通过嵌套 git 仓库隐藏 diff，不得依赖开发者本机未提交路径，不得让 TideSync 运行时继续加载 PyPI 旧 adapter。
+当前对象的可修改源码必须在 TideSync 仓库内可审查。受控源码目录名必须表达上游派生身份和 Qwen adapter 责任面；`forks/vision-agents-qwen-native` 是本书用于该身份的规范目录表面。若团队仓库规范要求其他目录名，该目录名必须保留同等身份信息，并满足本章边界：源码不得只存在于 external，不得通过嵌套 git 仓库隐藏 diff，不得依赖开发者本机未提交路径，不得让 TideSync 运行时继续加载 PyPI 旧 adapter。
 
 当前对象可以引用 external 中的上游 Vision Agents clone 作为证据来源。证据来源不是完成物。完成物必须进入 TideSync PR。
 

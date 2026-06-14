@@ -33,6 +33,11 @@
 * [ ] function call 执行并回传结果。
 * [ ] search 配置发送且 usage.plugins.search 保留。
 * [ ] response.done usage 保留 raw payload。
+* [ ] transcript done 形成 final 边界。
+* [ ] cancel error 不阻止本地 flush。
+* [ ] stale delta 被屏蔽。
+* [ ] tool error 回传可解释结果或进入有断言覆盖的终止路径。
+* [ ] usage 解析失败保留 raw payload。
 * [ ] Qwen error 保留结构化字段并影响状态。
 
 == 证据

@@ -31,7 +31,7 @@ Adapter 的合同配置必须以官方原生 JSON 字段为准：`input_audio_fo
 
 Adapter 必须启用 `input_audio_transcription`，因为 TideSync 需要用户 transcript 投影支撑会话记录和验收观察。Qwen3.5 合同默认转写模型必须以本地官方文档和在线文档为准登记。
 
-当官方文档冲突或 live 兼容性未知时，adapter 配置必须把合同目标和兼容性未知分开表达。旧示例中的 `gummy-realtime-v1` 不能在没有 Qwen3.5 证据时作为合同默认值。
+当官方文档冲突或 live 兼容性未知时，adapter 配置必须把合同目标和兼容性未知分开表达，并把冲突登记到 xref:document-conflict-register[文档冲突登记, rel=depends-on]。旧示例中的 `gummy-realtime-v1` 不能在没有 Qwen3.5 证据时作为合同默认值。
 
 [#turn-detection-contract.contract, normative=must]
 === Turn Detection
