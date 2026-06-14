@@ -5,7 +5,7 @@ import os
 import uuid
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Literal, cast
 
@@ -55,6 +55,8 @@ class ResponseState(StrEnum):
     RESPONSE_CREATED = "response_created"
     OUTPUT_ITEM_OPEN = "output_item_open"
     CONTENT_PART_OPEN = "content_part_open"
+    CANCEL_REQUESTED = "cancel_requested"
+    INTERRUPTED = "interrupted"
     COMPLETED = "completed"
 
 
@@ -63,6 +65,9 @@ class LocalAudioOutputState(StrEnum):
     AUDIO_OUTPUT_STREAMING = "audio_output_streaming"
     AUDIO_DONE_RECEIVED = "audio_done_received"
     AUDIO_OUTPUT_DONE_EMITTED = "audio_output_done_emitted"
+    AUDIO_INTERRUPTED = "audio_interrupted"
+    AUDIO_FLUSH_EMITTED = "audio_flush_emitted"
+    STALE_AUDIO_BLOCKED = "stale_audio_blocked"
 
 
 class TranscriptState(StrEnum):
@@ -72,6 +77,7 @@ class TranscriptState(StrEnum):
     AGENT_TRANSCRIPT_EMPTY = "agent_transcript_empty"
     AGENT_TRANSCRIPT_DELTA = "agent_transcript_delta"
     AGENT_TRANSCRIPT_FINAL = "agent_transcript_final"
+    TRANSCRIPT_INTERRUPTED_BOUNDARY = "transcript_interrupted_boundary"
 
 
 class UsageState(StrEnum):
@@ -83,6 +89,13 @@ class UsageState(StrEnum):
 class SearchUsageState(StrEnum):
     SEARCH_USAGE_MISSING = "search_usage_missing"
     SEARCH_USAGE_SEEN = "search_usage_seen"
+
+
+class ErrorState(StrEnum):
+    NO_ERROR = "no_error"
+    CANCEL_ERROR = "cancel_error"
+    INPUT_TIMING_ERROR = "input_timing_error"
+    UNKNOWN_QWEN_ERROR = "unknown_qwen_error"
 
 
 @dataclass(slots=True)
@@ -154,6 +167,47 @@ class QwenUsageSnapshot:
 
 
 @dataclass(slots=True)
+class QwenCancelErrorSnapshot:
+    event_id: str | None = None
+    type: str | None = None
+    code: str | None = None
+    message: str | None = None
+    param: str | None = None
+
+    def snapshot(self) -> dict[str, str | None]:
+        return {
+            "event_id": self.event_id,
+            "type": self.type,
+            "code": self.code,
+            "message": self.message,
+            "param": self.param,
+        }
+
+
+@dataclass(slots=True)
+class QwenInterruptionState:
+    interrupted_response_ids: set[str] = field(default_factory=set)
+    stale_audio_blocked: int = 0
+    stale_transcript_blocked: int = 0
+    stale_completion_blocked: int = 0
+
+    def mark_interrupted(self, response_id: str | None) -> None:
+        if response_id:
+            self.interrupted_response_ids.add(response_id)
+
+    def is_interrupted(self, response_id: str | None) -> bool:
+        return response_id is not None and response_id in self.interrupted_response_ids
+
+    def snapshot(self) -> dict[str, object]:
+        return {
+            "interrupted_response_ids": sorted(self.interrupted_response_ids),
+            "stale_audio_blocked": self.stale_audio_blocked,
+            "stale_transcript_blocked": self.stale_transcript_blocked,
+            "stale_completion_blocked": self.stale_completion_blocked,
+        }
+
+
+@dataclass(slots=True)
 class QwenResponseProjection:
     response: ResponseState = ResponseState.NO_RESPONSE
     audio_output: LocalAudioOutputState = LocalAudioOutputState.NO_AUDIO_OUTPUT
@@ -161,13 +215,16 @@ class QwenResponseProjection:
     agent_transcript: TranscriptState = TranscriptState.AGENT_TRANSCRIPT_EMPTY
     usage: UsageState = UsageState.USAGE_ABSENT
     search: SearchUsageState = SearchUsageState.SEARCH_USAGE_MISSING
+    error: ErrorState = ErrorState.NO_ERROR
     response_id: str | None = None
     item_id: str | None = None
     conversation_item_id: str | None = None
     content_part_type: str | None = None
     agent_speech_started: bool = False
+    agent_speech_ended: bool = False
     agent_transcript_text: str = ""
     usage_snapshot: QwenUsageSnapshot | None = None
+    cancel_error: QwenCancelErrorSnapshot | None = None
 
     def begin_response(self, response_id: str | None) -> None:
         self.response = ResponseState.RESPONSE_CREATED
@@ -180,8 +237,10 @@ class QwenResponseProjection:
         self.conversation_item_id = None
         self.content_part_type = None
         self.agent_speech_started = False
+        self.agent_speech_ended = False
         self.agent_transcript_text = ""
         self.usage_snapshot = None
+        self.cancel_error = None
 
     def snapshot(self) -> dict[str, str | None]:
         return {
@@ -195,6 +254,7 @@ class QwenResponseProjection:
             "agent_transcript": self.agent_transcript.value,
             "usage": self.usage.value,
             "search": self.search.value,
+            "error": self.error.value,
         }
 
 
@@ -246,6 +306,7 @@ class Qwen3Realtime(Realtime):
         self._current_participant: Participant | None = None
         self._input_turn_state = QwenInputTurnState()
         self._response_projection = QwenResponseProjection()
+        self._interruption_state = QwenInterruptionState()
         self._audio_transcription_model = audio_transcription_model
         self._turn_detection = turn_detection
         self._vad_threshold = vad_threshold
@@ -347,6 +408,13 @@ class Qwen3Realtime(Realtime):
     def _qwen_usage_snapshot(self) -> dict[str, Any]:
         usage = self._response_projection.usage_snapshot or QwenUsageSnapshot()
         return usage.snapshot()
+
+    def _qwen_interruption_snapshot(self) -> dict[str, object]:
+        return self._interruption_state.snapshot()
+
+    def _qwen_cancel_error_snapshot(self) -> dict[str, str | None]:
+        cancel_error = self._response_projection.cancel_error or QwenCancelErrorSnapshot()
+        return cancel_error.snapshot()
 
     async def simple_response(
         self,
@@ -468,6 +536,11 @@ class Qwen3Realtime(Realtime):
                 )
                 if _is_image_timing_error(error):
                     self._input_turn_state.suspend_after_image_timing_error()
+                    self._response_projection.error = ErrorState.INPUT_TIMING_ERROR
+                elif _is_cancel_error(error):
+                    self._record_cancel_error(event)
+                else:
+                    self._response_projection.error = ErrorState.UNKNOWN_QWEN_ERROR
                 self._emit_error_event(
                     error=Exception(str(error)),
                     context="qwen_realtime_api",
@@ -494,8 +567,7 @@ class Qwen3Realtime(Realtime):
             elif event_type == "input_audio_buffer.speech_started":
                 self._input_turn_state.mark_speech_started()
                 self._emit_user_speech_started()
-                if self._is_responding:
-                    await self._on_interruption()
+                await self._on_interruption()
             elif event_type == "input_audio_buffer.speech_stopped":
                 self._input_turn_state.close_for_speech_stopped()
                 self._emit_user_speech_ended()
@@ -519,6 +591,8 @@ class Qwen3Realtime(Realtime):
                 self._handle_response_audio_transcript_delta(event)
             elif event_type == "response.audio_transcript.done":
                 self._handle_response_audio_transcript_done(event)
+            elif event_type == "response.text.delta":
+                self._handle_response_text_delta(event)
 
     def _handle_response_created(self, event: dict[str, Any]) -> None:
         response_id = _extract_response_id(event)
@@ -554,6 +628,9 @@ class Qwen3Realtime(Realtime):
 
     def _handle_response_done(self, event: dict[str, Any]) -> None:
         response_id = _extract_response_id(event) or self._current_response_id
+        if self._is_stale_response(response_id):
+            self._interruption_state.stale_completion_blocked += 1
+            return
         self._response_projection.response_id = response_id
         self._response_projection.response = ResponseState.COMPLETED
         if "usage" in event:
@@ -569,6 +646,10 @@ class Qwen3Realtime(Realtime):
 
     def _handle_response_audio_delta(self, event: dict[str, Any]) -> None:
         response_id = _extract_response_id(event) or self._current_response_id
+        if self._is_stale_response(response_id):
+            self._interruption_state.stale_audio_blocked += 1
+            self._response_projection.audio_output = LocalAudioOutputState.STALE_AUDIO_BLOCKED
+            return
         self._response_projection.audio_output = LocalAudioOutputState.AUDIO_OUTPUT_STREAMING
         audio_bytes = base64.b64decode(event["delta"])
         pcm = PcmData.from_bytes(audio_bytes, 24000)
@@ -577,12 +658,21 @@ class Qwen3Realtime(Realtime):
 
     def _handle_response_audio_done(self, event: dict[str, Any]) -> None:
         response_id = _extract_response_id(event) or self._current_response_id
+        if self._is_stale_response(response_id):
+            self._interruption_state.stale_completion_blocked += 1
+            return
         self._response_projection.audio_output = LocalAudioOutputState.AUDIO_DONE_RECEIVED
         self._emit_audio_output_done_event(response_id=response_id, interrupted=False)
         self._response_projection.audio_output = LocalAudioOutputState.AUDIO_OUTPUT_DONE_EMITTED
         self._emit_agent_speech_ended(response_id=response_id, interrupted=False)
+        self._response_projection.agent_speech_ended = True
 
     def _handle_response_audio_transcript_delta(self, event: dict[str, Any]) -> None:
+        response_id = _extract_response_id(event) or self._current_response_id
+        if self._is_stale_response(response_id):
+            self._interruption_state.stale_transcript_blocked += 1
+            self._response_projection.agent_transcript = TranscriptState.TRANSCRIPT_INTERRUPTED_BOUNDARY
+            return
         delta = event.get("delta", "")
         if not delta:
             return
@@ -591,6 +681,11 @@ class Qwen3Realtime(Realtime):
         self._emit_agent_speech_transcription(text=delta, mode="delta")
 
     def _handle_response_audio_transcript_done(self, event: dict[str, Any]) -> None:
+        response_id = _extract_response_id(event) or self._current_response_id
+        if self._is_stale_response(response_id):
+            self._interruption_state.stale_transcript_blocked += 1
+            self._response_projection.agent_transcript = TranscriptState.TRANSCRIPT_INTERRUPTED_BOUNDARY
+            return
         transcript = event.get("transcript")
         if transcript is None:
             transcript = event.get("text")
@@ -600,6 +695,12 @@ class Qwen3Realtime(Realtime):
         self._response_projection.agent_transcript = TranscriptState.AGENT_TRANSCRIPT_FINAL
         self._response_projection.agent_transcript_text = transcript
         self._emit_agent_speech_transcription(text=transcript, mode="final")
+
+    def _handle_response_text_delta(self, event: dict[str, Any]) -> None:
+        response_id = _extract_response_id(event) or self._current_response_id
+        if self._is_stale_response(response_id):
+            self._interruption_state.stale_transcript_blocked += 1
+            self._response_projection.agent_transcript = TranscriptState.TRANSCRIPT_INTERRUPTED_BOUNDARY
 
     def _ensure_agent_speech_started(self, response_id: str | None) -> None:
         if self._response_projection.agent_speech_started:
@@ -627,17 +728,71 @@ class Qwen3Realtime(Realtime):
         self._response_projection.search = SearchUsageState.SEARCH_USAGE_SEEN if usage_snapshot.search_usage is not None else SearchUsageState.SEARCH_USAGE_MISSING
         self._response_projection.usage_snapshot = usage_snapshot
 
+    def _is_stale_response(self, response_id: str | None) -> bool:
+        # Qwen does not guarantee response.cancel prevents already-in-flight
+        # deltas, so replayed response ids are blocked before core projection.
+        return self._interruption_state.is_interrupted(response_id)
+
     async def _on_interruption(self) -> None:
         """Handle user interruption of the current response."""
-        if not self._is_responding:
+        if not self._should_interrupt_current_response():
             return
 
-        if self._current_response_id:
+        response_id = self._current_response_id or self._response_projection.response_id
+        self._response_projection.response = ResponseState.CANCEL_REQUESTED
+        self._interruption_state.mark_interrupted(response_id)
+        self._emit_local_interruption(response_id)
+
+        if response_id:
             await self._client.cancel_response()
 
         self._is_responding = False
         self._current_response_id = None
         self._current_item_id = None
+
+    def _should_interrupt_current_response(self) -> bool:
+        if self._current_response_id or self._is_responding:
+            return True
+        return (
+            self._response_projection.response
+            in {
+                ResponseState.RESPONSE_CREATED,
+                ResponseState.OUTPUT_ITEM_OPEN,
+                ResponseState.CONTENT_PART_OPEN,
+                ResponseState.CANCEL_REQUESTED,
+            }
+            or self._response_projection.audio_output
+            in {
+                LocalAudioOutputState.AUDIO_OUTPUT_STREAMING,
+                LocalAudioOutputState.AUDIO_DONE_RECEIVED,
+                LocalAudioOutputState.AUDIO_OUTPUT_DONE_EMITTED,
+            }
+            or self._response_projection.agent_transcript is TranscriptState.AGENT_TRANSCRIPT_DELTA
+        )
+
+    def _emit_local_interruption(self, response_id: str | None) -> None:
+        self._response_projection.response = ResponseState.INTERRUPTED
+        self._response_projection.audio_output = LocalAudioOutputState.AUDIO_INTERRUPTED
+        self._emit_audio_output_done_event(response_id=response_id, interrupted=True)
+        self._response_projection.audio_output = LocalAudioOutputState.AUDIO_FLUSH_EMITTED
+        if not self._response_projection.agent_speech_ended:
+            self._emit_agent_speech_ended(response_id=response_id, interrupted=True)
+            self._response_projection.agent_speech_ended = True
+        if self._response_projection.agent_transcript_text:
+            self._response_projection.agent_transcript = TranscriptState.TRANSCRIPT_INTERRUPTED_BOUNDARY
+
+    def _record_cancel_error(self, event: dict[str, Any]) -> None:
+        error = event.get("error", {})
+        if not isinstance(error, dict):
+            error = {}
+        self._response_projection.error = ErrorState.CANCEL_ERROR
+        self._response_projection.cancel_error = QwenCancelErrorSnapshot(
+            event_id=event.get("event_id") if isinstance(event.get("event_id"), str) else None,
+            type=error.get("type") if isinstance(error.get("type"), str) else None,
+            code=error.get("code") if isinstance(error.get("code"), str) else None,
+            message=error.get("message") if isinstance(error.get("message"), str) else None,
+            param=error.get("param") if isinstance(error.get("param"), str) else None,
+        )
 
 
 def _is_image_timing_error(error: dict[str, Any]) -> bool:
@@ -646,6 +801,14 @@ def _is_image_timing_error(error: dict[str, Any]) -> bool:
     param = str(error.get("param", "")).lower()
     text = " ".join((code, message, param))
     return "image" in text and ("before" in text or "timing" in text or "audio" in text or "input_image_buffer" in text)
+
+
+def _is_cancel_error(error: dict[str, Any]) -> bool:
+    code = str(error.get("code", "")).lower()
+    message = str(error.get("message", "")).lower()
+    param = str(error.get("param", "")).lower()
+    text = " ".join((code, message, param))
+    return "cancel" in text or "cancellable" in text or "response.cancel" in text
 
 
 def _extract_response_id(event: dict[str, Any]) -> str | None:

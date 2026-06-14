@@ -5,13 +5,15 @@ Coordinator role: principal coordinator
 
 ## Current Phase
 
-The controlled source baseline has already landed on `main`:
+Batches 01 through 03 have landed on `main`:
 
-- Commit: `aa71a67 Merge pull request #9 from MichengLiang/setup/qwen-adapter-controlled-source`
-- Current branch before batch dispatch: `main`
-- Worktree status before batch dispatch: clean in TideSync and clean in `forks/vision-agents-qwen-native`
+- Batch 01 merge commit: `2b73b11 Merge pull request #11 from MichengLiang/feature/qwen35-session-config-contract`
+- Batch 02 merge commit: `052f669 Merge pull request #12 from MichengLiang/feature/qwen35-input-turn-video-state`
+- Batch 03 merge commit: `01ed97c Merge pull request #13 from MichengLiang/feature/qwen35-server-event-mapping`
+- Current branch before Batch 04 dispatch: `main`
+- Worktree status before Batch 04 dispatch: clean before Batch 04 prep files were authored.
 
-This means batch 01 did not repeat controlled-source import work. Batch 01 started from the controlled runtime source and implemented the next contract slice: session configuration and client event senders.
+Batch 04 is the next implementation slice: interruption path, local audio flush, stale response isolation, and cancel-error behavior.
 
 Batch 01 review status:
 
@@ -106,12 +108,28 @@ Batch 03, review accepted:
   - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
-Batch 04, next dispatch:
+Batch 04, review accepted:
 
 - Name: `batch-04-interruption-local-flush-stale-response-cancel-error`
-- Owner role: persistent builder subagent after Batch 03 promotion is closed.
-- Expected branch: to be assigned in a Batch 04 handoff.
-- Required coordinator work before dispatch: create Batch 04 handoff and review package from the interruption contract, response state, local audio state, transcript interruption boundary, error contract, and interruption assertions.
+- Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-04-interruption-local-flush-stale-response-cancel-error.md`
+- Review package: `docs/qwen35-omni-adapter-contract/review-packages/batch-04-interruption-local-flush-stale-response-cancel-error-spec-review.md`
+- Owner role: persistent builder subagent.
+- Expected branch: `feature/qwen35-interruption-state`
+- Expected report: `docs/qwen35-omni-adapter-contract/reports/batch-04-interruption-local-flush-stale-response-cancel-error.md`
+- Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-04-interruption-local-flush-stale-response-cancel-error.md`
+- Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-04-builder-dispatch-prompt.md`
+- Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-04-reviewer-dispatch-prompt.md`
+- Implementation commit: `830f914 feat: implement Qwen interruption state handling`
+- Review-fix commit: `105ee3f fix: unblock Qwen post-response interruption path`
+- Reviewed final HEAD: `4b01c38b49fe0ffa52ca88e674581b3582ef67ad`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-04-interruption-local-flush-stale-response-cancel-error-review.md`
+- Promotion decision: Batch 04 may be promoted. Non-blocking note is that live interruption latency remains unmeasured because live Qwen verification lacks explicit API key, cost authorization, and service availability.
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
 Future batches, not yet dispatched:
 
@@ -130,7 +148,7 @@ Persistent builder subagent:
 
 - Uses model `gpt-5.5`, reasoning `high`, `fork_context=false`.
 - Starts from the handoff file only.
-- Implements batch 01.
+- Implements the currently dispatched batch.
 - Writes long reports to files, not chat.
 - Commits its own batch changes with a focused commit.
 
@@ -164,16 +182,27 @@ Build object:
 - `plugins/qwen/tests/`
 - Root TideSync tests if needed: `tests/`
 
+Batch 04 authoritative sections:
+
+- Interruption contract: `parts/300-target-contract/060-interruption-contract.adoc:1-44`
+- Interruption assertions: `parts/400-conformance-assertions/050-interruption-assertions.adoc:1-80`
+- Server event interruption/error boundaries: `parts/300-target-contract/040-server-event-contract.adoc:13-22`, `33-47`, `65-70`
+- Response, local audio, turn, transcript, and error state: `parts/300-target-contract/050-state-model.adoc:36-63`, `75-80`
+- Structured error subset: `parts/300-target-contract/080-error-contract.adoc:6-18`
+- Core carriers for local flush: `parts/200-current-system/040-vision-agents-core-carriers.adoc:6-27`
+- Test evidence: `parts/500-evidence-governance/010-test-evidence-contract.adoc:13-34`
+
 Current baseline facts:
 
-- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py:30-44` constructor currently exposes limited config.
-- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py:80-100` session config currently sends `pcm16`, `pcm24`, `gummy-realtime-v1`, and hard-coded `server_vad`.
-- `plugins/qwen/vision_agents/plugins/qwen/client.py:87-125` client currently sends `session.update`, audio append, commit, image append, and response cancel.
-- `plugins/qwen/vision_agents/plugins/qwen/client.py` currently lacks `input_audio_buffer.clear`, `conversation.item.create`, and `response.create` senders.
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` maps Qwen response lifecycle, audio done, transcript done, and usage state after Batch 03.
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` still has a narrow `_on_interruption()` path that sends `response.cancel` and clears private current-response fields without local flush or stale response isolation.
+- `plugins/qwen/vision_agents/plugins/qwen/client.py` has the `response.cancel` sender needed by Batch 04.
+- `agents-core/vision_agents/core/llm/realtime.py` already exposes `RealtimeAudioOutputDone(interrupted=True)` and `RealtimeAgentSpeechEnded(interrupted=True)`.
+- `agents-core/vision_agents/core/agents/inference/realtime_flow.py` already turns interrupted audio done into local `interrupt()` and downstream audio flush.
 
 ## Open Blockers
 
-No blocker prevents batch 01.
+No blocker prevents Batch 04 dispatch.
 
 Live API verification remains blocked unless an executor has valid API key, cost authorization, and service availability. This does not block fake WebSocket and static config tests.
 
