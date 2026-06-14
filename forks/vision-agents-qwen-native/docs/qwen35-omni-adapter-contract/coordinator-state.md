@@ -1,0 +1,115 @@
+# Qwen3.5 Omni Adapter Contract Coordination State
+
+Status timestamp: 2026-06-14
+Coordinator role: principal coordinator
+
+## Current Phase
+
+The controlled source baseline has already landed on `main`:
+
+- Commit: `aa71a67 Merge pull request #9 from MichengLiang/setup/qwen-adapter-controlled-source`
+- Current branch before batch dispatch: `main`
+- Worktree status before batch dispatch: clean in TideSync and clean in `forks/vision-agents-qwen-native`
+
+This means batch 01 does not repeat controlled-source import work. Batch 01 starts from the controlled runtime source and implements the next contract slice: session configuration and client event senders.
+
+## Promotion Boundary
+
+No implementation batch may be treated as complete until all of these are true:
+
+1. The executor committed only the batch-relevant files on a topic branch.
+2. The executor wrote a batch report under `docs/qwen35-omni-adapter-contract/reports/`.
+3. The executor wrote a PR body draft under `docs/qwen35-omni-adapter-contract/pr-bodies/`.
+4. A separate reviewer subagent reviewed the implementation against the batch review package.
+5. Review findings either approve the batch or are sent back to the same executor for fixes.
+6. Evidence paths and commands are recorded in the coordination state.
+
+## Batch Plan
+
+Batch 00, accepted baseline:
+
+- Controlled source exists under `forks/vision-agents-qwen-native`.
+- Root dependency resolution points to local editable packages.
+- Runtime import path test exists at `tests/test_vision_agents_runtime_path.py`.
+- Upstream provenance exists at `forks/vision-agents-qwen-native/UPSTREAM.adoc`.
+
+Batch 01, next dispatch:
+
+- Name: `batch-01-session-config-and-client-senders`
+- Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-01-session-config-and-client-senders.md`
+- Review package: `docs/qwen35-omni-adapter-contract/review-packages/batch-01-session-config-and-client-senders-spec-review.md`
+- Owner role: persistent builder subagent
+- Expected branch: `feature/qwen35-session-config-contract`
+- Expected report: `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders.md`
+- Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-01-session-config-and-client-senders.md`
+
+Future batches, not yet dispatched:
+
+- Batch 02: input turn and video send-permission state.
+- Batch 03: server event mapping for speech, audio done, transcript done, and usage.
+- Batch 04: interruption path, local flush, stale response isolation, and cancel error behavior.
+- Batch 05: tools execution, search usage, and structured tool errors.
+- Batch 06: structured Qwen errors, reconnect state reset, evidence closure, and full PR conformance statement.
+
+## Role Registry
+
+Coordinator:
+
+- Maintains plan, resource map, role registry, handoff packages, review packages, and promotion decisions.
+- Does not implement adapter code.
+- Answers executor questions with exact document paths and line ranges.
+
+Persistent builder subagent:
+
+- Uses model `gpt-5.5`, reasoning `high`, `fork_context=false`.
+- Starts from the handoff file only.
+- Implements batch 01.
+- Writes long reports to files, not chat.
+- Commits its own batch changes with a focused commit.
+
+Reviewer subagent:
+
+- Will be dispatched only after the builder returns.
+- Uses the review package as review basis.
+- Does not fix code unless explicitly reassigned.
+
+## Resource Map
+
+Authoritative contract book:
+
+- `docs/bookshelf/books/09-qwen35-omni-realtime-websocket-adapter-contract/book.adoc`
+
+Batch 01 authoritative sections:
+
+- Source/runtime contract: `parts/300-target-contract/010-source-and-runtime-contract.adoc:1-32`
+- Session config contract: `parts/300-target-contract/020-session-config-contract.adoc:1-52`
+- Client event contract: `parts/300-target-contract/030-client-event-contract.adoc:1-55`
+- Runtime source assertions: `parts/400-conformance-assertions/020-runtime-source-assertions.adoc:1-61`
+- Session config assertions: `parts/400-conformance-assertions/030-session-config-assertions.adoc:1-80`
+- Test evidence contract: `parts/500-evidence-governance/010-test-evidence-contract.adoc:1-55`
+- PR conformance statement: `parts/500-evidence-governance/020-pr-conformance-statement.adoc:1-41`
+- Upstream provenance contract: `parts/500-evidence-governance/030-upstream-provenance.adoc:1-39`
+
+Build object:
+
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py`
+- `plugins/qwen/vision_agents/plugins/qwen/client.py`
+- `plugins/qwen/tests/`
+- Root TideSync tests if needed: `tests/`
+
+Current baseline facts:
+
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py:30-44` constructor currently exposes limited config.
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py:80-100` session config currently sends `pcm16`, `pcm24`, `gummy-realtime-v1`, and hard-coded `server_vad`.
+- `plugins/qwen/vision_agents/plugins/qwen/client.py:87-125` client currently sends `session.update`, audio append, commit, image append, and response cancel.
+- `plugins/qwen/vision_agents/plugins/qwen/client.py` currently lacks `input_audio_buffer.clear`, `conversation.item.create`, and `response.create` senders.
+
+## Open Blockers
+
+No blocker prevents batch 01.
+
+Live API verification remains blocked unless an executor has valid API key, cost authorization, and service availability. This does not block fake WebSocket and static config tests.
+
+## Coordinator Notes
+
+Executor questions should be answered by pointing them to exact source lines in this state file, the handoff file, or the contract book. If the coordinator lacks an answer, a temporary reconnaissance subagent should be dispatched rather than letting the builder infer scope.

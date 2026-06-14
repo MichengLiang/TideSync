@@ -5,7 +5,8 @@ from dataclasses import dataclass
 
 from dotenv import load_dotenv
 from vision_agents.core import Agent, AgentLauncher, Runner, User
-from vision_agents.plugins import getstream, qwen
+from vision_agents.plugins.getstream import Edge
+from vision_agents.plugins.qwen import Realtime as QwenRealtime
 
 load_dotenv()
 
@@ -14,10 +15,7 @@ DEFAULT_QWEN_BASE_URL = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
 DEFAULT_QWEN_VOICE = "Tina"
 DEFAULT_QWEN_FPS = 1
 
-INSTRUCTIONS = (
-    "你是 TideSync 的实时全模态语音视频助手。"
-    "请优先用简洁自然的中文回答用户，能看见画面时结合画面内容回答。"
-)
+INSTRUCTIONS = "你是 TideSync 的实时全模态语音视频助手。请优先用简洁自然的中文回答用户，能看见画面时结合画面内容回答。"
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,7 +57,7 @@ def _env_int(name: str, default: int) -> int:
 
 async def create_agent(**kwargs: object) -> Agent:
     settings = RealtimeSettings.from_env()
-    llm = qwen.Realtime(
+    llm = QwenRealtime(
         model=settings.model,
         base_url=settings.base_url,
         voice=settings.voice,
@@ -67,7 +65,7 @@ async def create_agent(**kwargs: object) -> Agent:
         include_video=True,
     )
     return Agent(
-        edge=getstream.Edge(),
+        edge=Edge(),
         agent_user=User(name="TideSync Qwen Assistant", id="tidesync-agent"),
         instructions=INSTRUCTIONS,
         llm=llm,

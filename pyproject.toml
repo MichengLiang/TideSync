@@ -16,8 +16,16 @@ tidesync-agent = "tidesync.agent:main"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3",
+    "basedpyright>=1.36.0",
+    "freezegun>=1.5.5",
+    "pyfakefs>=5.10.2",
+    "pytest>=9.1.0",
+    "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
+    "pytest-json-report>=1.5.0",
+    "pytest-mock>=3.15.1",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.14.0",
 ]
 
@@ -82,6 +90,7 @@ executionEnvironments = [
 # Ruff - 目录级别代码规范
 # ========================================
 [tool.ruff]
+extend-exclude = ["forks"]
 line-length = 320
 target-version = "py313"
 
@@ -131,13 +140,20 @@ python_functions = "test_*"
 addopts = [
     "-v",              # verbose
     "--tb=short",
+    "--strict-config",
+    "--strict-markers",
     "--cov=tidesync",  # 修改为正确的模块路径
+    "--cov-branch",
     "--cov-report=term-missing",
 ]
 
 # 为不同类型的测试设置标记
 markers = [
+    "contract: Qwen realtime adapter contract and event replay tests",
+    "integration: tests that require a live service, network, or external credentials",
+    "slow: tests that are intentionally slower than the default unit suite",
 ]
+asyncio_mode = "auto"
 
 [tool.vision-agents.agent]
 entrypoint = "tidesync.agent:runner"
