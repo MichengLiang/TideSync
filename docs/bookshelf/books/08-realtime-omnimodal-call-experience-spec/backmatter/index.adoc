@@ -37,4 +37,5 @@
 * xref:cost-degradation-projection[成本降级与公共投影]
 * xref:cost-conformance-assertions[成本符合性断言]
 * xref:cost-nonconformance-cases[成本不符合案例]
+* xref:coverage-cost-governance-map[成本治理覆盖]
 * xref:appendix-structured-surface[结构化表面约定]

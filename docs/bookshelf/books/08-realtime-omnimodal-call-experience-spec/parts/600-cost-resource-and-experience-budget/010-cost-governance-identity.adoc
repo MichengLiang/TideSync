@@ -5,12 +5,12 @@
 
 成本治理首先服务体验承诺，而不是服务账单数字。账单金额、资源配额、模型 token、带宽、存储、电量和工具调用费用都是成本投影；它们只有在影响用户可依赖行为、实现范围、运营能力或符合性声明时，才进入本书的规范判断。
 
-成本治理也不是秘密降级的授权。符合实现可以降低视觉采样、限制会话时长、调整模型路由、压缩上下文、关闭高成本工具或切换为低成本模态；这些策略不得破坏xref:constitutive-conditions[构成性条件, rel=constrains]，也不得让用户误以为系统仍在承担已经被降级、关闭或替换的体验承诺。
+成本治理也不是秘密降级的授权。符合实现可以降低视觉采样、限制会话时长、调整模型路由、压缩上下文、关闭高成本工具或切换为低成本模态；这些策略受xref:constitutive-conditions[构成性条件, rel=depends-on]约束，不得让用户误以为系统仍在承担已经被降级、关闭或替换的体验承诺。
 
 [#cost-governance-center-proposition.requirement, normative=must]
 === 成本治理中心命题
 
-一个实现只有在成本控制、资源降级、模态切换、工具限制、上下文压缩和执行位置调整不破坏核心体验承诺，并且在影响用户可依赖行为时提供xref:user-visible-feedback[公共投影, rel=depends-on]，才可以把这些策略纳入实时全模态视频通话体验的符合性声明。
+一个实现只有在成本控制、资源降级、模态切换、工具限制、上下文压缩和执行位置调整不破坏核心体验承诺，并且在影响用户可依赖行为时提供xref:user-visible-feedback[用户可见反馈, rel=depends-on]，才可以把这些策略纳入实时全模态视频通话体验的符合性声明。
 
 这个命题约束本部后续章节。xref:cost-resource-ledger[成本与资源账本]定义成本被观察和归因的表面；xref:experience-budget-and-hard-gates[体验预算与硬门槛]说明哪些要求不能被成本收益抵消；xref:modality-budget-model[模态预算模型]说明不同模态组合如何服务不同任务；xref:visual-evidence-reference-assets[视觉证据与引用资产]说明快照和片段如何成为稳定指称对象；xref:cost-degradation-projection[成本降级与公共投影]说明降级何时必须被用户观察；xref:cost-conformance-assertions[成本符合性断言]把这些规则转化为黑盒判定。
 
