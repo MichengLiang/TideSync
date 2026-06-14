@@ -2,7 +2,7 @@ import asyncio
 import base64
 import json
 import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from typing import Any, ClassVar
 
 import dotenv
@@ -29,20 +29,42 @@ from vision_agents.plugins.qwen.client import Qwen3RealtimeClient
 dotenv.load_dotenv()
 
 
+ReconnectStartCallback = Callable[[int], Awaitable[None]]
+ReconnectSuccessCallback = Callable[[], Awaitable[None]]
+
+
 class FakeQwenClient:
     instances: ClassVar[list["FakeQwenClient"]] = []
 
-    def __init__(self, *, api_key: str, base_url: str, model: str, config: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        model: str,
+        config: dict[str, Any],
+        on_reconnect_start: ReconnectStartCallback | None = None,
+        on_reconnect_success: ReconnectSuccessCallback | None = None,
+    ) -> None:
         self.api_key = api_key
         self.base_url = base_url
         self.model = model
         self.config = config
         self.events: list[dict[str, Any]] = []
         self.server_events: list[dict[str, Any]] = []
+        self.on_reconnect_start = on_reconnect_start
+        self.on_reconnect_success = on_reconnect_success
         FakeQwenClient.instances.append(self)
 
     async def connect(self) -> None:
         self.events.append({"type": "session.update", "session": self.config})
+
+    async def simulate_recoverable_reconnect(self, code: int) -> None:
+        assert self.on_reconnect_start is not None
+        assert self.on_reconnect_success is not None
+        await self.on_reconnect_start(code)
+        await self.connect()
+        await self.on_reconnect_success()
 
     async def close(self) -> None:
         return None
@@ -704,6 +726,174 @@ async def test_image_timing_error_suspends_until_new_audio_turn(
 
 
 @pytest.mark.contract
+async def test_qwen_error_keeps_structured_fields_and_impact_scope(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "structured error"
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.append(
+        {
+            "type": "error",
+            "event_id": "evt_model",
+            "error": {
+                "type": "invalid_request_error",
+                "code": "invalid_model",
+                "message": "Invalid model qwen-unknown",
+                "param": "model",
+            },
+        }
+    )
+
+    await rt._process_events()
+
+    assert rt._qwen_error_snapshot() == {
+        "event_id": "evt_model",
+        "type": "invalid_request_error",
+        "code": "invalid_model",
+        "message": "Invalid model qwen-unknown",
+        "param": "model",
+        "state": "session_config_error",
+        "impact_scope": ["session"],
+        "recoverable": False,
+        "raw_error": {
+            "type": "invalid_request_error",
+            "code": "invalid_model",
+            "message": "Invalid model qwen-unknown",
+            "param": "model",
+        },
+    }
+    assert rt._qwen_session_snapshot()["state"] == "failed"
+
+
+@pytest.mark.contract
+async def test_session_config_error_fails_session_and_blocks_future_sends(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "session config error"
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.append(
+        {
+            "type": "error",
+            "event_id": "evt_session",
+            "error": {
+                "type": "invalid_request_error",
+                "code": "invalid_session_config",
+                "message": "Invalid session configuration",
+                "param": "session",
+            },
+        }
+    )
+
+    await rt._process_events()
+    await rt.simple_audio_response(fake_pcm())
+    await rt.commit_audio_and_create_response()
+    await rt.clear_audio()
+    await rt._send_video_frame(fake_frame())
+
+    assert [event["type"] for event in client.events] == ["session.update"]
+    assert rt._qwen_session_snapshot() == {
+        "state": "failed",
+        "last_reconnect_code": None,
+        "reconnect_count": 0,
+        "failed_reason": "session_config_error",
+    }
+    assert rt._qwen_error_snapshot()["state"] == "session_config_error"
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize("close_code", [1011, 1012, 1013, 1014])
+async def test_recoverable_reconnect_resets_state_and_resends_session_update(
+    fake_qwen_client: type[FakeQwenClient],
+    close_code: int,
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "recoverable reconnect"
+
+    @rt.function_registry.register(name="lookup_order")
+    async def lookup_order(order_id: str) -> dict[str, str]:
+        await asyncio.sleep(0.1)
+        return {"order_id": order_id}
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm())
+    await rt._send_video_frame(fake_frame())
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_old"}},
+            {
+                "type": "response.output_item.added",
+                "response_id": "resp_old",
+                "item": {"id": "item_old"},
+            },
+            {"type": "response.audio.delta", "response_id": "resp_old", "delta": qwen_audio_delta()},
+            {
+                "type": "response.function_call_arguments.done",
+                "response_id": "resp_old",
+                "call_id": "call_pending",
+                "name": "lookup_order",
+                "arguments": {"order_id": "order-123"},
+            },
+        ]
+    )
+
+    await rt._process_events()
+    await asyncio.sleep(0)
+    assert rt._qwen_response_snapshot()["response_id"] == "resp_old"
+    assert rt._qwen_response_snapshot()["item_id"] == "item_old"
+    assert rt._qwen_state_snapshot()["video"] == "send_allowed"
+    assert rt._qwen_tool_snapshot()["tool_running"] is True
+
+    await client.simulate_recoverable_reconnect(close_code)
+
+    assert [event["type"] for event in client.events].count("session.update") == 2
+    assert rt._qwen_session_snapshot() == {
+        "state": "session_active",
+        "last_reconnect_code": close_code,
+        "reconnect_count": 1,
+        "failed_reason": None,
+    }
+    assert rt._qwen_error_snapshot()["state"] == "connection_error_recoverable"
+    assert rt._qwen_error_snapshot()["impact_scope"] == [
+        "session",
+        "input_turn",
+        "video_permission",
+        "response",
+        "local_audio_output",
+        "tool",
+    ]
+    assert rt._qwen_response_snapshot() == {
+        "response_id": None,
+        "item_id": None,
+        "conversation_item_id": None,
+        "content_part_type": None,
+        "response": "no_response",
+        "audio_output": "no_audio_output",
+        "user_transcript": "user_transcript_empty",
+        "agent_transcript": "agent_transcript_empty",
+        "usage": "usage_absent",
+        "search": "search_usage_missing",
+        "error": "connection_error_recoverable",
+    }
+    assert rt._qwen_state_snapshot() == {
+        "input_audio": "turn_empty",
+        "video": "track_reconnected_waiting_audio",
+    }
+    assert rt._qwen_interruption_snapshot()["interrupted_response_ids"] == []
+    assert rt._qwen_tool_snapshot()["tool_running"] is False
+    assert rt._qwen_tool_snapshot()["call_id"] is None
+    events_before_video = len(client.events)
+    await rt._send_video_frame(fake_frame())
+    assert len(client.events) == events_before_video
+
+
+@pytest.mark.contract
 async def test_response_audio_delta_and_done_emit_output_boundary(
     fake_qwen_client: type[FakeQwenClient],
 ) -> None:
@@ -858,9 +1048,12 @@ async def test_response_done_usage_parse_failure_retains_raw_payload(
     snapshot = rt._qwen_response_snapshot()
     usage_snapshot = rt._qwen_usage_snapshot()
     assert snapshot["usage"] == "usage_parse_failed"
+    assert snapshot["error"] == "usage_parse_error"
     assert usage_snapshot["response_id"] == "resp_bad_usage"
     assert usage_snapshot["raw_usage"] == invalid_usage
     assert usage_snapshot["parse_error"] == "token count must be an int or None, got str"
+    assert rt._qwen_error_snapshot()["state"] == "usage_parse_error"
+    assert rt._qwen_error_snapshot()["impact_scope"] == ["usage"]
 
 
 @pytest.mark.contract

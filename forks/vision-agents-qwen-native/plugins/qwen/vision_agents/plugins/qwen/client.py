@@ -4,7 +4,7 @@ import contextlib
 import json
 import logging
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 import websockets
@@ -26,6 +26,8 @@ class Qwen3RealtimeClient:
         base_url: str,
         config: dict[str, Any],
         reconnect_backoff: float = 1.0,
+        on_reconnect_start: Callable[[int], Awaitable[None]] | None = None,
+        on_reconnect_success: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self._base_url = f"{base_url}?model={model}"
         self._api_key = api_key
@@ -35,6 +37,8 @@ class Qwen3RealtimeClient:
         self._conn_lock = asyncio.Lock()
         self._closed = False
         self._reconnect_backoff = reconnect_backoff
+        self._on_reconnect_start = on_reconnect_start
+        self._on_reconnect_success = on_reconnect_success
 
     async def connect(self) -> None:
         if self._conn_lock.locked():
@@ -68,8 +72,7 @@ class Qwen3RealtimeClient:
             except websockets.ConnectionClosedError as e:
                 if not _should_reconnect(e):
                     raise
-                await asyncio.sleep(self._reconnect_backoff)
-                await self.connect()
+                await self._reconnect(e.rcvd.code)
 
     async def send_event(self, event: dict[str, Any]) -> None:
         event["event_id"] = f"event_{int(time.time() * 1000)}"
@@ -80,8 +83,15 @@ class Qwen3RealtimeClient:
             if not _should_reconnect(e):
                 raise
             logger.warning(f"Re-establishing Qwen3Realtime connection due to error: {e}")
-            await asyncio.sleep(self._reconnect_backoff)
-            await self.connect()
+            await self._reconnect(e.rcvd.code)
+
+    async def _reconnect(self, close_code: int) -> None:
+        if self._on_reconnect_start is not None:
+            await self._on_reconnect_start(close_code)
+        await asyncio.sleep(self._reconnect_backoff)
+        await self.connect()
+        if self._on_reconnect_success is not None:
+            await self._on_reconnect_success()
 
     async def update_session(self, config: dict[str, Any]) -> None:
         """Update the session configuration."""
