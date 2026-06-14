@@ -27,8 +27,8 @@ Outputs:
 - `build/html/index.html`
 - `build/html/catalog.html`
 - `build/html/books/<book-id>/book.html`
-- `build/adoc/catalog.adoc`
-- `build/adoc/books/<book-id>.adoc`
+
+Each book HTML includes continuous and paged reading views. The copy-source control copies an abundant-tree source bundle for the current book; default builds do not write expanded ADOC files under `build/adoc/`.
 
 Diagram blocks render as Kroki image URLs by default, so normal builds do not depend on the Kroki service being available at build time.
 To fetch diagram images into the local HTML output, run:
