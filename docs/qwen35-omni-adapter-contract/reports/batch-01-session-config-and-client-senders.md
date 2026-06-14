@@ -2,7 +2,7 @@
 
 Branch: `feature/qwen35-session-config-contract`
 
-Commit SHA: final batch commit on this branch; use `git rev-parse HEAD` after commit. A Git commit cannot contain its own final object id without changing that object id.
+Implementation commit SHA: `c64b067`.
 
 ## Files Changed
 
