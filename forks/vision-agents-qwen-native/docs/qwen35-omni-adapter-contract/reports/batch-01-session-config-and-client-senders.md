@@ -9,8 +9,8 @@ Implementation commit SHA: `c64b067`.
 - `forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py`
 - `forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py`
 - `forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
-- `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders.md`
-- `docs/qwen35-omni-adapter-contract/pr-bodies/batch-01-session-config-and-client-senders.md`
+- `forks/vision-agents-qwen-native/docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders.md`
+- `forks/vision-agents-qwen-native/docs/qwen35-omni-adapter-contract/pr-bodies/batch-01-session-config-and-client-senders.md`
 
 ## Contract IDs Covered
 
@@ -33,6 +33,8 @@ Implementation commit SHA: `c64b067`.
 
 ## Assertion Results
 
+Review fix note: the builder report and PR body draft now live under the fork work-area `docs/qwen35-omni-adapter-contract/` paths. The misplaced TideSync root `docs/qwen35-omni-adapter-contract/` copies were removed. Manual-mode fake evidence now includes audio append before commit and response create.
+
 `runtime-imports-controlled-adapter`: PASS.
 
 Evidence: `uv run pytest tests/test_vision_agents_runtime_path.py` passed and asserts `vision_agents.core`, `vision_agents.plugins.qwen`, `vision_agents.plugins.qwen.qwen_realtime`, and `vision_agents.plugins.getstream` load from `forks/vision-agents-qwen-native`.
@@ -51,7 +53,7 @@ Evidence: `test_semantic_vad_is_visible_in_session_update` constructs `Realtime(
 
 `manual-mode-configurable`: PASS for Batch 01 sender/config scope.
 
-Evidence: `test_manual_mode_sends_null_turn_detection_and_response_create` constructs `Realtime(turn_detection=None)`, captures `turn_detection: None`, and verifies the adapter can send `input_audio_buffer.commit` followed by `response.create` through the fake client.
+Evidence: `test_manual_mode_sends_null_turn_detection_and_response_create` constructs `Realtime(turn_detection=None)`, captures `turn_detection: None`, sends fake audio through `simple_audio_response()`, and verifies the fake client sequence `session.update`, `input_audio_buffer.append`, `input_audio_buffer.commit`, and `response.create`.
 
 `tools-search-mutually-exclusive`: PASS.
 
@@ -72,7 +74,7 @@ Final verification:
 - Note: pytest-cov emitted warnings that `tidesync` was not imported and no coverage data was collected. The command still passed; these warnings are caused by root coverage settings on a narrow import-path test.
 
 - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
-- Result: `6 passed, 2 skipped`.
+- Result: `6 passed, 2 skipped` for the implementation commit; after the review fix, result: `6 passed, 2 skipped`.
 - Note: pytest-cov emitted the same no-data warning because the command targets plugin tests outside the `tidesync` coverage package. The two skipped tests are the pre-existing live integration tests.
 
 - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`

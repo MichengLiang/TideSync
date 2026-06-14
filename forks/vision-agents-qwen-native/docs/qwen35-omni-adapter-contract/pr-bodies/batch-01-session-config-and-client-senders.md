@@ -4,6 +4,8 @@ This PR implements Batch 01 of the Qwen3.5 Omni Realtime WebSocket adapter contr
 
 The Qwen adapter now builds a single explicit `session.update.session` payload for the Qwen3.5 contract defaults, exposes `semantic_vad` and WebSocket Manual mode, rejects tools/search mutual exclusion before any session update is sent, and adds the missing client senders for audio clear, function call output, and response creation.
 
+Review fix: the report and PR body draft now live under the fork work-area evidence paths, the misplaced root evidence copies were removed, and Manual-mode fake evidence now includes audio append before commit and response create.
+
 ## Scope
 
 - `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py`
@@ -17,6 +19,7 @@ The Qwen adapter now builds a single explicit `session.update.session` payload f
   - Adds `input_audio_buffer.clear`, `conversation.item.create` for `function_call_output`, and `response.create`.
 - `plugins/qwen/tests/test_qwen_realtime.py`
   - Adds fake-client/static tests for session update payloads.
+  - Covers Manual mode with audio append before commit and response create.
   - Adds fake WebSocket sender tests for the new client event methods.
   - Leaves existing live integration tests skipped.
 - `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders.md`
@@ -34,7 +37,7 @@ This PR belongs in the controlled fork because the 09 contract requires Qwen ada
 - `dependency-resolution-reproducible`: covered by existing editable dependency resolution plus runtime path test.
 - `session-update-uses-qwen35-contract-values`: covered by fake-client session update capture.
 - `semantic-vad-configurable`: covered by fake-client session update capture.
-- `manual-mode-configurable`: covered by `turn_detection: None` plus commit and response create sender evidence.
+- `manual-mode-configurable`: covered by `turn_detection: None` plus fake audio append, commit, and response create sender evidence.
 - `tools-search-mutually-exclusive`: covered by a negative fake-client test that asserts no illegal session update is sent.
 - Client event set slice: covered for `input_audio_buffer.clear`, `conversation.item.create` with `function_call_output`, and `response.create`.
 

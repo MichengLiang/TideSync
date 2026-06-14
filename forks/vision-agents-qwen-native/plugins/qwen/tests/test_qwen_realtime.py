@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any, ClassVar
 
 import dotenv
+import numpy as np
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from aiortc.mediastreams import MediaStreamTrack
@@ -124,12 +125,14 @@ async def test_manual_mode_sends_null_turn_detection_and_response_create(
     rt._instructions = "manual mode"
 
     await rt.connect()
+    await rt.simple_audio_response(PcmData(sample_rate=16000, format="s16", samples=np.zeros(160, dtype=np.int16)))
     await rt.commit_audio_and_create_response()
 
     client = fake_qwen_client.instances[0]
     assert client.config["turn_detection"] is None
     assert [event["type"] for event in client.events] == [
         "session.update",
+        "input_audio_buffer.append",
         "input_audio_buffer.commit",
         "response.create",
     ]
