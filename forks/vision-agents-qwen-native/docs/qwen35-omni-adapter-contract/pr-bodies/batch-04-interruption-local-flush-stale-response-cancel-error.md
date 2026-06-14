@@ -5,6 +5,7 @@ This PR implements Batch 04 of the Qwen3.5 Omni Realtime WebSocket adapter contr
 ## Scope
 
 - Turns `input_audio_buffer.speech_started` into a real interruption path when agent output or locally playable output is active.
+- Ensures that interruption decision is not gated by `_is_responding`, including the post-`response.done` stale-risk case where local response/audio projection still requires interruption.
 - Emits `RealtimeAudioOutputDone(interrupted=True)` and `RealtimeAgentSpeechEnded(interrupted=True)` before relying on remote cancel success.
 - Sends `response.cancel` when a current response id is cancellable.
 - Records interrupted response ids and blocks late stale audio, transcript, text delta, and completion events for those ids.
@@ -21,6 +22,7 @@ This PR implements Batch 04 of the Qwen3.5 Omni Realtime WebSocket adapter contr
 - `cancel-error-does-not-block-local-flush`: covered by `test_cancel_error_does_not_block_local_flush_or_stale_isolation`.
 - `stale-delta-after-interrupt-blocked`: covered by `test_stale_audio_and_transcript_deltas_after_interrupt_are_blocked`.
 - Later valid response id after interruption: covered by `test_follow_up_response_after_interrupt_is_not_treated_as_stale`.
+- Post-`response.done` stale-risk interruption: covered by `test_speech_started_interrupts_after_response_done_when_local_audio_remains_risky`.
 
 The adapter uses existing core carriers: `RealtimeAudioOutputDone(interrupted=True)` triggers `RealtimeInferenceFlow.interrupt()`, and `RealtimeAgentSpeechEnded(interrupted=True)` projects the agent turn interruption. No core runtime changes are required for this batch.
 
@@ -29,7 +31,7 @@ The adapter uses existing core carriers: `RealtimeAudioOutputDone(interrupted=Tr
 - `uv run pytest tests/test_vision_agents_runtime_path.py`
   - `1 passed`
 - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
-  - `24 passed, 2 skipped`
+  - `25 passed, 2 skipped`
 - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `All checks passed!`
 - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
