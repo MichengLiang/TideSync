@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 import logging
 import os
 import uuid
@@ -89,6 +90,18 @@ class UsageState(StrEnum):
 class SearchUsageState(StrEnum):
     SEARCH_USAGE_MISSING = "search_usage_missing"
     SEARCH_USAGE_SEEN = "search_usage_seen"
+
+
+class ToolState(StrEnum):
+    TOOLS_DISABLED = "tools_disabled"
+    TOOLS_REGISTERED = "tools_registered"
+    FUNCTION_CALL_DELTA_SEEN = "function_call_delta_seen"
+    FUNCTION_CALL_READY = "function_call_ready"
+    TOOL_RUNNING = "tool_running"
+    TOOL_SUCCEEDED = "tool_succeeded"
+    TOOL_FAILED = "tool_failed"
+    TOOL_OUTPUT_SENT = "tool_output_sent"
+    TOOL_RESPONSE_REQUESTED = "tool_response_requested"
 
 
 class ErrorState(StrEnum):
@@ -208,6 +221,92 @@ class QwenInterruptionState:
 
 
 @dataclass(slots=True)
+class QwenToolCallState:
+    tools_registered: int = 0
+    state: ToolState = ToolState.TOOLS_DISABLED
+    function_call_delta_seen: bool = False
+    function_call_ready: bool = False
+    tool_running: bool = False
+    tool_succeeded: bool = False
+    tool_failed: bool = False
+    tool_output_sent: bool = False
+    tool_response_requested: bool = False
+    call_id: str | None = None
+    name: str | None = None
+    arguments: dict[str, Any] | None = None
+    output: str | None = None
+    error: str | None = None
+    deltas_by_call_id: dict[str, str] = field(default_factory=dict)
+    pending_or_finished_call_ids: set[str] = field(default_factory=set)
+
+    def mark_tools_registered(self, count: int) -> None:
+        self.tools_registered = count
+        self.state = ToolState.TOOLS_REGISTERED if count else ToolState.TOOLS_DISABLED
+
+    def mark_delta(self, call_id: str | None, delta: str) -> None:
+        self.function_call_delta_seen = True
+        self.state = ToolState.FUNCTION_CALL_DELTA_SEEN
+        if call_id:
+            self.deltas_by_call_id[call_id] = f"{self.deltas_by_call_id.get(call_id, '')}{delta}"
+
+    def mark_call_started(self, call_id: str) -> bool:
+        if call_id in self.pending_or_finished_call_ids:
+            return False
+        self.pending_or_finished_call_ids.add(call_id)
+        return True
+
+    def mark_ready(self, *, call_id: str, name: str, arguments: dict[str, Any]) -> None:
+        self.call_id = call_id
+        self.name = name
+        self.arguments = arguments
+        self.function_call_ready = True
+        self.state = ToolState.FUNCTION_CALL_READY
+
+    def mark_running(self) -> None:
+        self.tool_running = True
+        self.state = ToolState.TOOL_RUNNING
+
+    def mark_output_sent(self, *, output: str) -> None:
+        self.tool_running = False
+        self.tool_output_sent = True
+        self.output = output
+        self.state = ToolState.TOOL_OUTPUT_SENT
+
+    def mark_response_requested(self) -> None:
+        self.tool_response_requested = True
+        self.state = ToolState.TOOL_RESPONSE_REQUESTED
+
+    def mark_success(self) -> None:
+        self.tool_succeeded = True
+        self.tool_failed = False
+        self.error = None
+        self.state = ToolState.TOOL_SUCCEEDED
+
+    def mark_failure(self, error: str) -> None:
+        self.tool_failed = True
+        self.tool_succeeded = False
+        self.error = error
+        self.state = ToolState.TOOL_FAILED
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "tools_registered": self.tools_registered,
+            "function_call_delta_seen": self.function_call_delta_seen,
+            "function_call_ready": self.function_call_ready,
+            "tool_running": self.tool_running,
+            "tool_succeeded": self.tool_succeeded,
+            "tool_failed": self.tool_failed,
+            "tool_output_sent": self.tool_output_sent,
+            "tool_response_requested": self.tool_response_requested,
+            "call_id": self.call_id,
+            "name": self.name,
+            "arguments": self.arguments,
+            "output": self.output,
+            "error": self.error,
+        }
+
+
+@dataclass(slots=True)
 class QwenResponseProjection:
     response: ResponseState = ResponseState.NO_RESPONSE
     audio_output: LocalAudioOutputState = LocalAudioOutputState.NO_AUDIO_OUTPUT
@@ -307,6 +406,8 @@ class Qwen3Realtime(Realtime):
         self._input_turn_state = QwenInputTurnState()
         self._response_projection = QwenResponseProjection()
         self._interruption_state = QwenInterruptionState()
+        self._tool_state = QwenToolCallState()
+        self._tool_tasks: set[asyncio.Task[None]] = set()
         self._audio_transcription_model = audio_transcription_model
         self._turn_detection = turn_detection
         self._vad_threshold = vad_threshold
@@ -335,7 +436,9 @@ class Qwen3Realtime(Realtime):
         self._start_processing_task()
 
     def _build_session_config(self) -> dict[str, Any]:
-        if self._tools and self._enable_search:
+        tools = self._collect_tools()
+        self._tool_state.mark_tools_registered(len(tools))
+        if tools and self._enable_search:
             raise ValueError("Qwen realtime tools and enable_search are mutually exclusive")
 
         session_config: dict[str, Any] = {
@@ -349,13 +452,16 @@ class Qwen3Realtime(Realtime):
             "input_audio_transcription": {"model": self._audio_transcription_model},
             "turn_detection": self._build_turn_detection_config(),
         }
-        if self._tools:
-            session_config["tools"] = self._convert_tools_to_provider_format(self._tools)
+        if tools:
+            session_config["tools"] = self._convert_tools_to_provider_format(tools)
         if self._enable_search:
             session_config["enable_search"] = True
             if self._search_options:
                 session_config["search_options"] = self._search_options
         return session_config
+
+    def _collect_tools(self) -> list[ToolSchema | dict[str, Any]]:
+        return [*self._tools, *self.get_available_functions()]
 
     def _build_turn_detection_config(self) -> dict[str, Any] | None:
         if self._turn_detection is None:
@@ -416,6 +522,9 @@ class Qwen3Realtime(Realtime):
         cancel_error = self._response_projection.cancel_error or QwenCancelErrorSnapshot()
         return cancel_error.snapshot()
 
+    def _qwen_tool_snapshot(self) -> dict[str, Any]:
+        return self._tool_state.snapshot()
+
     async def simple_response(
         self,
         text: str,
@@ -430,6 +539,7 @@ class Qwen3Realtime(Realtime):
         if self._processing_task is not None:
             self._processing_task.cancel()
             await self._processing_task
+        await self._cancel_tool_tasks()
 
         self._executor.shutdown(wait=False)
 
@@ -525,6 +635,19 @@ class Qwen3Realtime(Realtime):
         if self._processing_task is not None:
             self._processing_task.cancel()
             await self._processing_task
+            self._processing_task = None
+
+    async def _cancel_tool_tasks(self) -> None:
+        for task in self._tool_tasks:
+            task.cancel()
+        if self._tool_tasks:
+            await asyncio.gather(*self._tool_tasks, return_exceptions=True)
+        self._tool_tasks.clear()
+
+    async def _wait_for_tool_tasks(self) -> None:
+        if not self._tool_tasks:
+            return
+        await asyncio.gather(*list(self._tool_tasks))
 
     async def _process_events(self) -> None:
         async for event in self._client.read():
@@ -593,6 +716,10 @@ class Qwen3Realtime(Realtime):
                 self._handle_response_audio_transcript_done(event)
             elif event_type == "response.text.delta":
                 self._handle_response_text_delta(event)
+            elif event_type == "response.function_call_arguments.delta":
+                self._handle_function_call_arguments_delta(event)
+            elif event_type == "response.function_call_arguments.done":
+                self._handle_function_call_arguments_done(event)
 
     def _handle_response_created(self, event: dict[str, Any]) -> None:
         response_id = _extract_response_id(event)
@@ -701,6 +828,68 @@ class Qwen3Realtime(Realtime):
         if self._is_stale_response(response_id):
             self._interruption_state.stale_transcript_blocked += 1
             self._response_projection.agent_transcript = TranscriptState.TRANSCRIPT_INTERRUPTED_BOUNDARY
+
+    def _handle_function_call_arguments_delta(self, event: dict[str, Any]) -> None:
+        delta = event.get("delta")
+        if not isinstance(delta, str):
+            return
+        self._tool_state.mark_delta(call_id=_extract_call_id(event), delta=delta)
+
+    def _handle_function_call_arguments_done(self, event: dict[str, Any]) -> None:
+        call_id = _extract_call_id(event)
+        if call_id is not None and not self._tool_state.mark_call_started(call_id):
+            return
+        task = asyncio.create_task(self._run_function_call(event))
+        self._tool_tasks.add(task)
+        task.add_done_callback(self._tool_tasks.discard)
+
+    async def _run_function_call(self, event: dict[str, Any]) -> None:
+        call_id = _extract_call_id(event)
+        name = _extract_function_name(event)
+        arguments_value = _extract_function_arguments(event)
+        if call_id is None:
+            logger.warning("Qwen function call event missing call_id: %s", event)
+            return
+        if name is None:
+            await self._send_tool_failure(call_id=call_id, name=None, error="Missing tool name")
+            return
+
+        try:
+            arguments = _parse_tool_arguments(arguments_value)
+            self._tool_state.mark_ready(call_id=call_id, name=name, arguments=arguments)
+            if self.function_registry.get_function(name) is None:
+                raise KeyError(f"Unknown tool '{name}'")
+            self._tool_state.mark_running()
+            result = await self.call_function(name, arguments)
+        except json.JSONDecodeError as exc:
+            await self._send_tool_failure(call_id=call_id, name=name, error=f"Invalid tool arguments JSON: {exc.msg}")
+            return
+        except KeyError as exc:
+            await self._send_tool_failure(call_id=call_id, name=name, error=str(exc).strip('"'))
+            return
+        except Exception as exc:
+            await self._send_tool_failure(call_id=call_id, name=name, error=f"Tool '{name}' failed: {exc}")
+            return
+
+        output = _serialize_tool_output(result)
+        self._tool_state.mark_success()
+        await self._send_tool_output_and_request_response(call_id=call_id, output=output)
+
+    async def _send_tool_failure(self, *, call_id: str, name: str | None, error: str) -> None:
+        if name and self._tool_state.call_id is None:
+            self._tool_state.call_id = call_id
+            self._tool_state.name = name
+        self._tool_state.mark_failure(error)
+        output = _serialize_tool_output({"ok": False, "error": error})
+        await self._send_tool_output_and_request_response(call_id=call_id, output=output)
+
+    async def _send_tool_output_and_request_response(self, *, call_id: str, output: str) -> None:
+        # Qwen requires every finished tool call, including failures, to receive
+        # function_call_output before response.create so the model is not left pending.
+        await self._client.send_function_call_output(call_id=call_id, output=output)
+        self._tool_state.mark_output_sent(output=output)
+        await self._client.create_response()
+        self._tool_state.mark_response_requested()
 
     def _ensure_agent_speech_started(self, response_id: str | None) -> None:
         if self._response_projection.agent_speech_started:
@@ -819,6 +1008,69 @@ def _extract_response_id(event: dict[str, Any]) -> str | None:
     if isinstance(response_id, str):
         return response_id
     return None
+
+
+def _extract_call_id(event: dict[str, Any]) -> str | None:
+    call_id = event.get("call_id")
+    if isinstance(call_id, str):
+        return call_id
+    item = event.get("item")
+    if isinstance(item, dict) and isinstance(item.get("call_id"), str):
+        return item["call_id"]
+    return None
+
+
+def _extract_function_name(event: dict[str, Any]) -> str | None:
+    name = event.get("name")
+    if isinstance(name, str):
+        return name
+    item = event.get("item")
+    if isinstance(item, dict):
+        item_name = item.get("name")
+        if isinstance(item_name, str):
+            return item_name
+        function = item.get("function")
+        if isinstance(function, dict) and isinstance(function.get("name"), str):
+            return function["name"]
+    function = event.get("function")
+    if isinstance(function, dict) and isinstance(function.get("name"), str):
+        return function["name"]
+    return None
+
+
+def _extract_function_arguments(event: dict[str, Any]) -> object:
+    if "arguments" in event:
+        return event["arguments"]
+    item = event.get("item")
+    if isinstance(item, dict) and "arguments" in item:
+        return item["arguments"]
+    function = event.get("function")
+    if isinstance(function, dict) and "arguments" in function:
+        return function["arguments"]
+    if isinstance(item, dict):
+        item_function = item.get("function")
+        if isinstance(item_function, dict) and "arguments" in item_function:
+            return item_function["arguments"]
+    return {}
+
+
+def _parse_tool_arguments(arguments: object) -> dict[str, Any]:
+    if isinstance(arguments, dict):
+        return dict(arguments)
+    if isinstance(arguments, str):
+        parsed = json.loads(arguments)
+        if not isinstance(parsed, dict):
+            raise TypeError(f"tool arguments must decode to an object, got {type(parsed).__name__}")
+        return parsed
+    if arguments is None:
+        return {}
+    raise TypeError(f"tool arguments must be a dict, JSON string, or None, got {type(arguments).__name__}")
+
+
+def _serialize_tool_output(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def _optional_int(value: object) -> int | None:

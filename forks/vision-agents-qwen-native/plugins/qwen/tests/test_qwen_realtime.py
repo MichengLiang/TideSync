@@ -69,6 +69,18 @@ class FakeQwenClient:
     async def cancel_response(self) -> None:
         self.events.append({"type": "response.cancel"})
 
+    async def send_function_call_output(self, *, call_id: str, output: str) -> None:
+        self.events.append(
+            {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": output,
+                },
+            }
+        )
+
 
 def fake_pcm() -> PcmData:
     return PcmData(sample_rate=16000, format="s16", samples=np.zeros(160, dtype=np.int16))
@@ -242,6 +254,241 @@ async def test_tools_and_search_config_payloads_do_not_include_unsupported_field
     for session in (tools_session, search_session):
         assert "tool_choice" not in session
         assert "parallel_tool_calls" not in session
+
+
+@pytest.mark.contract
+async def test_registry_tool_schema_is_sent_in_session_update(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "registry tools"
+
+    @rt.function_registry.register(
+        name="lookup_order",
+        description="Lookup an order",
+        parameters_schema={
+            "type": "object",
+            "properties": {"order_id": {"type": "string"}},
+            "required": ["order_id"],
+        },
+    )
+    async def lookup_order(order_id: str) -> dict[str, str]:
+        return {"order_id": order_id}
+
+    await rt.connect()
+
+    session = fake_qwen_client.instances[0].config
+    assert session["tools"] == [
+        {
+            "type": "function",
+            "function": {
+                "name": "lookup_order",
+                "description": "Lookup an order",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"order_id": {"type": "string"}},
+                    "required": ["order_id"],
+                },
+            },
+        }
+    ]
+    assert "tool_choice" not in session
+    assert "parallel_tool_calls" not in session
+    assert rt._qwen_tool_snapshot()["tools_registered"] == 1
+
+
+@pytest.mark.contract
+async def test_registry_tools_and_search_are_rejected_before_session_update(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key", enable_search=True)
+
+    @rt.function_registry.register(name="lookup_order")
+    async def lookup_order(order_id: str) -> dict[str, str]:
+        return {"order_id": order_id}
+
+    with pytest.raises(ValueError, match="tools and enable_search"):
+        await rt.connect()
+
+    assert fake_qwen_client.instances == []
+
+
+@pytest.mark.contract
+async def test_function_call_done_executes_registry_tool_and_requests_response(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "tool call"
+    calls: list[dict[str, Any]] = []
+
+    @rt.function_registry.register(
+        name="lookup_order",
+        description="Lookup an order",
+        parameters_schema={
+            "type": "object",
+            "properties": {"order_id": {"type": "string"}},
+            "required": ["order_id"],
+        },
+    )
+    async def lookup_order(order_id: str) -> dict[str, str]:
+        calls.append({"order_id": order_id})
+        return {"order_id": order_id, "status": "shipped"}
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {
+                "type": "response.function_call_arguments.delta",
+                "response_id": "resp_tool",
+                "call_id": "call_1",
+                "name": "lookup_order",
+                "delta": '{"order_id":',
+            },
+            {
+                "type": "response.function_call_arguments.done",
+                "response_id": "resp_tool",
+                "call_id": "call_1",
+                "name": "lookup_order",
+                "arguments": '{"order_id": "order-123"}',
+            },
+        ]
+    )
+
+    await rt._process_events()
+    await rt._wait_for_tool_tasks()
+
+    assert calls == [{"order_id": "order-123"}]
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "conversation.item.create",
+        "response.create",
+    ]
+    output_event = client.events[1]
+    assert output_event["item"]["type"] == "function_call_output"
+    assert output_event["item"]["call_id"] == "call_1"
+    assert json.loads(output_event["item"]["output"]) == {
+        "order_id": "order-123",
+        "status": "shipped",
+    }
+    assert rt._qwen_tool_snapshot() == {
+        "tools_registered": 1,
+        "function_call_delta_seen": True,
+        "function_call_ready": True,
+        "tool_running": False,
+        "tool_succeeded": True,
+        "tool_failed": False,
+        "tool_output_sent": True,
+        "tool_response_requested": True,
+        "call_id": "call_1",
+        "name": "lookup_order",
+        "arguments": {"order_id": "order-123"},
+        "output": '{"order_id":"order-123","status":"shipped"}',
+        "error": None,
+    }
+
+
+@pytest.mark.contract
+@pytest.mark.parametrize(
+    ("server_event", "expected_error"),
+    [
+        (
+            {
+                "type": "response.function_call_arguments.done",
+                "response_id": "resp_tool",
+                "call_id": "call_unknown",
+                "name": "missing_tool",
+                "arguments": {"order_id": "order-123"},
+            },
+            "Unknown tool 'missing_tool'",
+        ),
+        (
+            {
+                "type": "response.function_call_arguments.done",
+                "response_id": "resp_tool",
+                "call_id": "call_bad_json",
+                "name": "lookup_order",
+                "arguments": '{"order_id":',
+            },
+            "Invalid tool arguments JSON",
+        ),
+    ],
+)
+async def test_function_call_errors_return_explainable_tool_output(
+    fake_qwen_client: type[FakeQwenClient],
+    server_event: dict[str, Any],
+    expected_error: str,
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "tool errors"
+
+    @rt.function_registry.register(name="lookup_order")
+    async def lookup_order(order_id: str) -> dict[str, str]:
+        return {"order_id": order_id}
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.append(server_event)
+
+    await rt._process_events()
+    await rt._wait_for_tool_tasks()
+
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "conversation.item.create",
+        "response.create",
+    ]
+    output_event = client.events[1]
+    assert output_event["item"]["call_id"] == server_event["call_id"]
+    output = json.loads(output_event["item"]["output"])
+    assert output["ok"] is False
+    assert expected_error in output["error"]
+    snapshot = rt._qwen_tool_snapshot()
+    assert snapshot["tool_failed"] is True
+    assert snapshot["tool_output_sent"] is True
+    assert snapshot["tool_response_requested"] is True
+    assert expected_error in snapshot["error"]
+
+
+@pytest.mark.contract
+async def test_function_call_execution_exception_returns_explainable_tool_output(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "tool exception"
+
+    @rt.function_registry.register(name="lookup_order")
+    async def lookup_order(order_id: str) -> dict[str, str]:
+        raise RuntimeError(f"order backend unavailable for {order_id}")
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.append(
+        {
+            "type": "response.function_call_arguments.done",
+            "response_id": "resp_tool",
+            "call_id": "call_exception",
+            "name": "lookup_order",
+            "arguments": {"order_id": "order-123"},
+        }
+    )
+
+    await rt._process_events()
+    await rt._wait_for_tool_tasks()
+
+    output_event = client.events[1]
+    assert output_event["item"]["call_id"] == "call_exception"
+    output = json.loads(output_event["item"]["output"])
+    assert output == {
+        "ok": False,
+        "error": "Tool 'lookup_order' failed: order backend unavailable for order-123",
+    }
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "conversation.item.create",
+        "response.create",
+    ]
+    assert rt._qwen_tool_snapshot()["tool_failed"] is True
 
 
 @pytest.mark.contract
