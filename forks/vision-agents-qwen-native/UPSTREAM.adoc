@@ -1,0 +1,34 @@
+= Upstream Provenance
+
+== Upstream
+
+Repository:: https://github.com/GetStream/Vision-Agents
+Tag:: v0.6.4
+Commit:: 9c5efe1ef4552efacef83de90a6b4870e2444c7b
+Import date:: 2026-06-14
+License:: Apache-2.0 for upstream repository; copied plugin package metadata retains its upstream package license fields.
+
+== Imported Paths
+
+* `agents-core`
+* `plugins/qwen`
+* `plugins/getstream`
+
+These paths form the TideSync runtime package surface for `vision_agents.core`, `vision_agents.plugins.qwen`, and `vision_agents.plugins.getstream`.
+
+== Omitted Paths
+
+* Other `plugins/*`: not imported because TideSync currently loads only Qwen and GetStream plugins.
+* `examples`: not imported because it is not part of the TideSync runtime path.
+* `docs`, `assets`, and repository automation: not imported because this directory is a controlled runtime-source fork, not a full upstream mirror.
+* Upstream repository `.git`: not imported because TideSync review requires ordinary repository diff visibility.
+
+== Local Modification Policy
+
+Local changes in this directory serve the Qwen3.5 Omni Realtime WebSocket adapter contract, TideSync dependency resolution, runtime import evidence, and adapter test evidence.
+
+The copied `plugins/qwen/pyproject.toml` removes the upstream monorepo-local `tool.uv.sources` workspace binding. TideSync root `pyproject.toml` owns local package source resolution for this controlled fork.
+
+== Sync Policy
+
+Future upstream updates must preserve the TideSync runtime import evidence and must be checked against the 09 Qwen3.5 Omni Realtime WebSocket adapter contract before replacing local behavior.

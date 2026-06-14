@@ -6,7 +6,9 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "python-dotenv>=1.2.2",
     "socksio>=1.0.0",
-    "vision-agents[qwen,getstream]>=0.6.4,<0.7",
+    "vision-agents>=0.6.4,<0.7",
+    "vision-agents-plugins-getstream>=0.6.4,<0.7",
+    "vision-agents-plugins-qwen>=0.6.4,<0.7",
 ]
 
 [project.scripts]
@@ -30,6 +32,11 @@ environments = [
 
 [tool.uv.workspace]
 members = ["."]
+
+[tool.uv.sources]
+vision-agents = { path = "forks/vision-agents-qwen-native/agents-core", editable = true }
+vision-agents-plugins-getstream = { path = "forks/vision-agents-qwen-native/plugins/getstream", editable = true }
+vision-agents-plugins-qwen = { path = "forks/vision-agents-qwen-native/plugins/qwen", editable = true }
 
 # ========================================
 # Basedpyright - 目录级别类型检查 (新策略：默认推荐)
