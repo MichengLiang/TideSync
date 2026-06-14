@@ -87,9 +87,14 @@ Batch 02, review accepted:
 Batch 03, next dispatch:
 
 - Name: `batch-03-server-event-mapping-speech-audio-transcript-usage`
-- Owner role: persistent builder subagent after Batch 02 promotion is closed.
-- Expected branch: to be assigned in a Batch 03 handoff.
-- Required coordinator work before dispatch: create Batch 03 handoff and review package from the server event contract, event mapping assertions, usage contract, and test evidence sections.
+- Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-03-server-event-mapping-speech-audio-transcript-usage.md`
+- Review package: `docs/qwen35-omni-adapter-contract/review-packages/batch-03-server-event-mapping-speech-audio-transcript-usage-spec-review.md`
+- Owner role: persistent builder subagent.
+- Expected branch: `feature/qwen35-server-event-mapping`
+- Expected report: `docs/qwen35-omni-adapter-contract/reports/batch-03-server-event-mapping-speech-audio-transcript-usage.md`
+- Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-03-server-event-mapping-speech-audio-transcript-usage.md`
+- Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-03-builder-dispatch-prompt.md`
+- Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-03-reviewer-dispatch-prompt.md`
 
 Future batches, not yet dispatched:
 
