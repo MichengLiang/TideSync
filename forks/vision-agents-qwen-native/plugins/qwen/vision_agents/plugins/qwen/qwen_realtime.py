@@ -108,7 +108,26 @@ class ErrorState(StrEnum):
     NO_ERROR = "no_error"
     CANCEL_ERROR = "cancel_error"
     INPUT_TIMING_ERROR = "input_timing_error"
+    SESSION_CONFIG_ERROR = "session_config_error"
+    CONNECTION_ERROR_RECOVERABLE = "connection_error_recoverable"
+    CONNECTION_ERROR_TERMINAL = "connection_error_terminal"
+    AUDIO_FORMAT_ERROR = "audio_format_error"
+    TRANSCRIPTION_MODEL_ERROR = "transcription_model_error"
+    TOOL_SCHEMA_ERROR = "tool_schema_error"
+    TOOL_EXECUTION_ERROR = "tool_execution_error"
+    SEARCH_TOOLS_CONFLICT_ERROR = "search_tools_conflict_error"
+    USAGE_PARSE_ERROR = "usage_parse_error"
     UNKNOWN_QWEN_ERROR = "unknown_qwen_error"
+
+
+class QwenSessionLifecycleState(StrEnum):
+    DISCONNECTED = "disconnected"
+    CONNECTING = "connecting"
+    SESSION_ACTIVE = "session_active"
+    RECONNECTING = "reconnecting"
+    CLOSING = "closing"
+    CLOSED = "closed"
+    FAILED = "failed"
 
 
 @dataclass(slots=True)
@@ -194,6 +213,48 @@ class QwenCancelErrorSnapshot:
             "code": self.code,
             "message": self.message,
             "param": self.param,
+        }
+
+
+@dataclass(slots=True)
+class QwenStructuredErrorSnapshot:
+    event_id: str | None = None
+    type: str | None = None
+    code: str | None = None
+    message: str | None = None
+    param: str | None = None
+    state: ErrorState = ErrorState.NO_ERROR
+    impact_scope: tuple[str, ...] = ()
+    recoverable: bool = False
+    raw_error: dict[str, Any] | None = None
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "event_id": self.event_id,
+            "type": self.type,
+            "code": self.code,
+            "message": self.message,
+            "param": self.param,
+            "state": self.state.value,
+            "impact_scope": list(self.impact_scope),
+            "recoverable": self.recoverable,
+            "raw_error": self.raw_error,
+        }
+
+
+@dataclass(slots=True)
+class QwenSessionState:
+    state: QwenSessionLifecycleState = QwenSessionLifecycleState.DISCONNECTED
+    last_reconnect_code: int | None = None
+    reconnect_count: int = 0
+    failed_reason: str | None = None
+
+    def snapshot(self) -> dict[str, str | int | None]:
+        return {
+            "state": self.state.value,
+            "last_reconnect_code": self.last_reconnect_code,
+            "reconnect_count": self.reconnect_count,
+            "failed_reason": self.failed_reason,
         }
 
 
@@ -324,6 +385,7 @@ class QwenResponseProjection:
     agent_transcript_text: str = ""
     usage_snapshot: QwenUsageSnapshot | None = None
     cancel_error: QwenCancelErrorSnapshot | None = None
+    structured_error: QwenStructuredErrorSnapshot | None = None
 
     def begin_response(self, response_id: str | None) -> None:
         self.response = ResponseState.RESPONSE_CREATED
@@ -406,6 +468,7 @@ class Qwen3Realtime(Realtime):
         self._input_turn_state = QwenInputTurnState()
         self._response_projection = QwenResponseProjection()
         self._interruption_state = QwenInterruptionState()
+        self._session_state = QwenSessionState()
         self._tool_state = QwenToolCallState()
         self._tool_tasks: set[asyncio.Task[None]] = set()
         self._audio_transcription_model = audio_transcription_model
@@ -416,20 +479,27 @@ class Qwen3Realtime(Realtime):
         self._tools = list(tools or [])
         self._enable_search = enable_search
         self._search_options = dict(search_options or {})
+        self._last_session_config: dict[str, Any] | None = None
 
     async def connect(self) -> None:
         # Stop the processing task first in case we're reconnecting
         await self._stop_processing_task()
 
+        self._session_state.state = QwenSessionLifecycleState.CONNECTING
         session_config = self._build_session_config()
         self._real_client = Qwen3RealtimeClient(
             api_key=self._api_key,
             base_url=self._base_url,
             model=self.model,
             config=session_config,
+            on_reconnect_start=self._on_client_reconnect_start,
+            on_reconnect_success=self._on_client_reconnect_success,
         )
         await self._real_client.connect()
         self._on_connected(session_config=session_config)
+        self._session_state.state = QwenSessionLifecycleState.SESSION_ACTIVE
+        self._session_state.failed_reason = None
+        self._last_session_config = session_config
         logger.debug(f"Started Qwen3Realtime session at {self._base_url}")
 
         # Start the loop task
@@ -439,6 +509,12 @@ class Qwen3Realtime(Realtime):
         tools = self._collect_tools()
         self._tool_state.mark_tools_registered(len(tools))
         if tools and self._enable_search:
+            self._record_local_error(
+                state=ErrorState.SEARCH_TOOLS_CONFLICT_ERROR,
+                message="Qwen realtime tools and enable_search are mutually exclusive",
+                impact_scope=("session", "tool"),
+                recoverable=False,
+            )
             raise ValueError("Qwen realtime tools and enable_search are mutually exclusive")
 
         session_config: dict[str, Any] = {
@@ -490,16 +566,22 @@ class Qwen3Realtime(Realtime):
         return qwen_tools
 
     async def commit_audio_and_create_response(self) -> None:
+        if not self._can_send_realtime_event():
+            return
         await self._client.commit_audio()
         self._input_turn_state.close_for_commit()
+        if not self._can_send_realtime_event():
+            return
         await self._client.create_response()
 
     async def clear_audio(self) -> None:
+        if not self._can_send_realtime_event():
+            return
         await self._client.clear_audio()
         self._input_turn_state.close_for_clear()
 
     async def simple_audio_response(self, pcm: PcmData, participant: Participant | None = None) -> None:
-        if not self.connected:
+        if not self._can_send_realtime_event():
             return
         self._current_participant = participant
         await self._client.send_audio(pcm=pcm)
@@ -522,6 +604,13 @@ class Qwen3Realtime(Realtime):
         cancel_error = self._response_projection.cancel_error or QwenCancelErrorSnapshot()
         return cancel_error.snapshot()
 
+    def _qwen_error_snapshot(self) -> dict[str, Any]:
+        structured_error = self._response_projection.structured_error or QwenStructuredErrorSnapshot()
+        return structured_error.snapshot()
+
+    def _qwen_session_snapshot(self) -> dict[str, str | int | None]:
+        return self._session_state.snapshot()
+
     def _qwen_tool_snapshot(self) -> dict[str, Any]:
         return self._tool_state.snapshot()
 
@@ -534,6 +623,7 @@ class Qwen3Realtime(Realtime):
         yield LLMResponseFinal()
 
     async def close(self) -> None:
+        self._session_state.state = QwenSessionLifecycleState.CLOSING
         self._on_disconnected()
         await self.stop_watching_video_track()
         if self._processing_task is not None:
@@ -546,6 +636,7 @@ class Qwen3Realtime(Realtime):
         if self._real_client is not None:
             await self._real_client.close()
             self._real_client = None
+        self._session_state.state = QwenSessionLifecycleState.CLOSED
 
     async def watch_video_track(
         self,
@@ -583,7 +674,7 @@ class Qwen3Realtime(Realtime):
         Parameters:
             frame: Video frame to send.
         """
-        if not self._input_turn_state.can_send_image():
+        if not self._can_send_realtime_event() or not self._input_turn_state.can_send_image():
             # Qwen image permission is scoped to the current input turn. Historical
             # audio from an older turn or track cannot authorize this frame.
             return
@@ -657,13 +748,7 @@ class Qwen3Realtime(Realtime):
                 logger.error(
                     f"Error received from Qwen3Realtime API: {error}",
                 )
-                if _is_image_timing_error(error):
-                    self._input_turn_state.suspend_after_image_timing_error()
-                    self._response_projection.error = ErrorState.INPUT_TIMING_ERROR
-                elif _is_cancel_error(error):
-                    self._record_cancel_error(event)
-                else:
-                    self._response_projection.error = ErrorState.UNKNOWN_QWEN_ERROR
+                self._record_qwen_error(event)
                 self._emit_error_event(
                     error=Exception(str(error)),
                     context="qwen_realtime_api",
@@ -880,10 +965,18 @@ class Qwen3Realtime(Realtime):
             self._tool_state.call_id = call_id
             self._tool_state.name = name
         self._tool_state.mark_failure(error)
+        self._record_local_error(
+            state=ErrorState.TOOL_EXECUTION_ERROR,
+            message=error,
+            impact_scope=("tool", "response"),
+            recoverable=True,
+        )
         output = _serialize_tool_output({"ok": False, "error": error})
         await self._send_tool_output_and_request_response(call_id=call_id, output=output)
 
     async def _send_tool_output_and_request_response(self, *, call_id: str, output: str) -> None:
+        if not self._can_send_realtime_event():
+            return
         # Qwen requires every finished tool call, including failures, to receive
         # function_call_output before response.create so the model is not left pending.
         await self._client.send_function_call_output(call_id=call_id, output=output)
@@ -914,6 +1007,12 @@ class Qwen3Realtime(Realtime):
         except Exception as exc:
             usage_snapshot.parse_error = str(exc)
             self._response_projection.usage = UsageState.USAGE_PARSE_FAILED
+            self._record_local_error(
+                state=ErrorState.USAGE_PARSE_ERROR,
+                message=str(exc),
+                impact_scope=("usage",),
+                recoverable=False,
+            )
         self._response_projection.search = SearchUsageState.SEARCH_USAGE_SEEN if usage_snapshot.search_usage is not None else SearchUsageState.SEARCH_USAGE_MISSING
         self._response_projection.usage_snapshot = usage_snapshot
 
@@ -982,6 +1081,108 @@ class Qwen3Realtime(Realtime):
             message=error.get("message") if isinstance(error.get("message"), str) else None,
             param=error.get("param") if isinstance(error.get("param"), str) else None,
         )
+        self._response_projection.structured_error = _structured_error_from_event(
+            event=event,
+            state=ErrorState.CANCEL_ERROR,
+            impact_scope=("response", "local_audio_output"),
+            recoverable=True,
+        )
+
+    def _record_qwen_error(self, event: dict[str, Any]) -> None:
+        error = event.get("error", {})
+        if not isinstance(error, dict):
+            error = {}
+        state, impact_scope, recoverable = _classify_qwen_error(error)
+        self._response_projection.error = state
+        self._response_projection.structured_error = _structured_error_from_event(
+            event=event,
+            state=state,
+            impact_scope=impact_scope,
+            recoverable=recoverable,
+        )
+        if state is ErrorState.INPUT_TIMING_ERROR:
+            self._input_turn_state.suspend_after_image_timing_error()
+        elif state is ErrorState.CANCEL_ERROR:
+            self._record_cancel_error(event)
+        elif state in {
+            ErrorState.SESSION_CONFIG_ERROR,
+            ErrorState.AUDIO_FORMAT_ERROR,
+            ErrorState.TRANSCRIPTION_MODEL_ERROR,
+        }:
+            self._fail_session(reason=state.value)
+
+    def _record_local_error(
+        self,
+        *,
+        state: ErrorState,
+        message: str,
+        impact_scope: tuple[str, ...],
+        recoverable: bool,
+    ) -> None:
+        self._response_projection.error = state
+        self._response_projection.structured_error = QwenStructuredErrorSnapshot(
+            message=message,
+            state=state,
+            impact_scope=impact_scope,
+            recoverable=recoverable,
+            raw_error={"message": message},
+        )
+
+    def _fail_session(self, *, reason: str) -> None:
+        self._session_state.state = QwenSessionLifecycleState.FAILED
+        self._session_state.failed_reason = reason
+        self._on_disconnected(reason=reason, clean=False)
+
+    def _can_send_realtime_event(self) -> bool:
+        return self.connected and self._session_state.state not in {
+            QwenSessionLifecycleState.RECONNECTING,
+            QwenSessionLifecycleState.FAILED,
+            QwenSessionLifecycleState.CLOSING,
+            QwenSessionLifecycleState.CLOSED,
+        }
+
+    async def _on_client_reconnect_start(self, close_code: int) -> None:
+        self._session_state.state = QwenSessionLifecycleState.RECONNECTING
+        self._session_state.last_reconnect_code = close_code
+        self._session_state.reconnect_count += 1
+        self._session_state.failed_reason = None
+        self._record_local_error(
+            state=ErrorState.CONNECTION_ERROR_RECOVERABLE,
+            message=f"recoverable websocket close code {close_code}",
+            impact_scope=(
+                "session",
+                "input_turn",
+                "video_permission",
+                "response",
+                "local_audio_output",
+                "tool",
+            ),
+            recoverable=True,
+        )
+        await self._reset_reconnect_scoped_state()
+
+    async def _on_client_reconnect_success(self) -> None:
+        self._session_state.state = QwenSessionLifecycleState.SESSION_ACTIVE
+        self.connected = True
+
+    async def _reset_reconnect_scoped_state(self) -> None:
+        # A Qwen reconnect starts a fresh remote session; old response ids,
+        # current-turn image permission, local audio, and pending tool calls must
+        # be isolated so late events from the prior websocket cannot leak forward.
+        await self._cancel_tool_tasks()
+        error = self._response_projection.structured_error
+        self._current_response_id = None
+        self._current_item_id = None
+        self._is_responding = False
+        self._input_turn_state = QwenInputTurnState()
+        self._input_turn_state.mark_track_reconnected()
+        self._response_projection = QwenResponseProjection()
+        self._response_projection.error = ErrorState.CONNECTION_ERROR_RECOVERABLE
+        self._response_projection.structured_error = error
+        self._interruption_state = QwenInterruptionState()
+        tools_count = len(self._collect_tools())
+        self._tool_state = QwenToolCallState()
+        self._tool_state.mark_tools_registered(tools_count)
 
 
 def _is_image_timing_error(error: dict[str, Any]) -> bool:
@@ -998,6 +1199,55 @@ def _is_cancel_error(error: dict[str, Any]) -> bool:
     param = str(error.get("param", "")).lower()
     text = " ".join((code, message, param))
     return "cancel" in text or "cancellable" in text or "response.cancel" in text
+
+
+def _classify_qwen_error(error: dict[str, Any]) -> tuple[ErrorState, tuple[str, ...], bool]:
+    if _is_image_timing_error(error):
+        return ErrorState.INPUT_TIMING_ERROR, ("input_turn", "video_permission"), True
+    if _is_cancel_error(error):
+        return ErrorState.CANCEL_ERROR, ("response", "local_audio_output"), True
+
+    text = _error_text(error)
+    if _has_any(text, ("input_audio_format", "output_audio_format", "audio format", "pcm")):
+        return ErrorState.AUDIO_FORMAT_ERROR, ("session",), False
+    if _has_any(text, ("input_audio_transcription", "transcription", "asr")):
+        return ErrorState.TRANSCRIPTION_MODEL_ERROR, ("session",), False
+    if _has_any(text, ("tool", "function schema", "parameters_schema")):
+        return ErrorState.TOOL_SCHEMA_ERROR, ("session", "tool"), False
+    if _has_any(text, ("session", "model", "auth", "unauthorized", "invalid config", "invalid_model")):
+        return ErrorState.SESSION_CONFIG_ERROR, ("session",), False
+    return ErrorState.UNKNOWN_QWEN_ERROR, ("session",), False
+
+
+def _structured_error_from_event(
+    *,
+    event: dict[str, Any],
+    state: ErrorState,
+    impact_scope: tuple[str, ...],
+    recoverable: bool,
+) -> QwenStructuredErrorSnapshot:
+    error = event.get("error", {})
+    if not isinstance(error, dict):
+        error = {}
+    return QwenStructuredErrorSnapshot(
+        event_id=event.get("event_id") if isinstance(event.get("event_id"), str) else None,
+        type=error.get("type") if isinstance(error.get("type"), str) else None,
+        code=error.get("code") if isinstance(error.get("code"), str) else None,
+        message=error.get("message") if isinstance(error.get("message"), str) else None,
+        param=error.get("param") if isinstance(error.get("param"), str) else None,
+        state=state,
+        impact_scope=impact_scope,
+        recoverable=recoverable,
+        raw_error=dict(error),
+    )
+
+
+def _error_text(error: dict[str, Any]) -> str:
+    return " ".join(str(error.get(key, "")).lower() for key in ("type", "code", "message", "param"))
+
+
+def _has_any(text: str, needles: tuple[str, ...]) -> bool:
+    return any(needle in text for needle in needles)
 
 
 def _extract_response_id(event: dict[str, Any]) -> str | None:
