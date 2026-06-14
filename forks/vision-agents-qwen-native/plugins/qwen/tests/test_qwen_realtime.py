@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import os
 from collections.abc import AsyncIterator, Iterator
@@ -13,9 +14,14 @@ from av import VideoFrame
 from getstream.video.rtc import PcmData
 from vision_agents.core.edge.types import Participant
 from vision_agents.core.llm.realtime import (
+    RealtimeAgentSpeechEnded,
+    RealtimeAgentSpeechStarted,
+    RealtimeAgentTranscript,
     RealtimeAudioOutput,
+    RealtimeAudioOutputDone,
     RealtimeUserSpeechEnded,
     RealtimeUserSpeechStarted,
+    RealtimeUserTranscript,
 )
 from vision_agents.plugins.qwen import Realtime, qwen_realtime
 from vision_agents.plugins.qwen.client import Qwen3RealtimeClient
@@ -67,6 +73,10 @@ def fake_pcm() -> PcmData:
 
 def fake_frame() -> VideoFrame:
     return VideoFrame(2, 2, "rgb24")
+
+
+def qwen_audio_delta(payload: bytes = b"\x00\x00\x01\x00") -> str:
+    return base64.b64encode(payload).decode()
 
 
 def fake_participant() -> Participant:
@@ -441,6 +451,253 @@ async def test_image_timing_error_suspends_until_new_audio_turn(
         "input_audio": "audio_appended",
         "video": "send_allowed",
     }
+
+
+@pytest.mark.contract
+async def test_response_audio_delta_and_done_emit_output_boundary(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "audio done"
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_1"}},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta()},
+            {"type": "response.audio.done", "response_id": "resp_1"},
+        ]
+    )
+
+    await rt._process_events()
+
+    events = rt.output.peek()
+    assert [type(event) for event in events] == [
+        RealtimeAgentSpeechStarted,
+        RealtimeAudioOutput,
+        RealtimeAudioOutputDone,
+        RealtimeAgentSpeechEnded,
+    ]
+    assert events[0].response_id == "resp_1"
+    assert events[1].response_id == "resp_1"
+    assert events[1].data.sample_rate == 24000
+    assert events[2].response_id == "resp_1"
+    assert events[2].interrupted is False
+    assert events[3].response_id == "resp_1"
+    assert events[3].interrupted is False
+    assert rt._qwen_response_snapshot()["audio_output"] == "audio_output_done_emitted"
+
+
+@pytest.mark.contract
+async def test_audio_transcript_delta_and_done_emit_non_empty_final(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "transcript done"
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_1"}},
+            {"type": "response.audio_transcript.delta", "response_id": "resp_1", "delta": "hello "},
+            {"type": "response.audio_transcript.delta", "response_id": "resp_1", "delta": "world"},
+            {"type": "response.audio_transcript.done", "response_id": "resp_1", "transcript": "hello world"},
+            {"type": "response.done", "response": {"id": "resp_1"}},
+        ]
+    )
+
+    await rt._process_events()
+
+    transcripts = [event for event in rt.output.peek() if isinstance(event, RealtimeAgentTranscript)]
+    assert [(event.mode, event.text) for event in transcripts] == [
+        ("delta", "hello "),
+        ("delta", "world"),
+        ("final", "hello world"),
+    ]
+    assert rt._qwen_response_snapshot()["agent_transcript"] == "agent_transcript_final"
+
+
+@pytest.mark.contract
+async def test_audio_transcript_done_uses_accumulated_delta_when_done_omits_text(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "transcript fallback"
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.audio_transcript.delta", "delta": "fallback "},
+            {"type": "response.audio_transcript.delta", "delta": "text"},
+            {"type": "response.audio_transcript.done"},
+        ]
+    )
+
+    await rt._process_events()
+
+    transcripts = [event for event in rt.output.peek() if isinstance(event, RealtimeAgentTranscript)]
+    assert transcripts[-1].mode == "final"
+    assert transcripts[-1].text == "fallback text"
+
+
+@pytest.mark.contract
+async def test_response_done_parses_usage_and_does_not_emit_empty_transcript_final(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "usage"
+    usage = {
+        "total_tokens": 42,
+        "input_tokens": 10,
+        "output_tokens": 32,
+        "input_token_details": {"audio_tokens": 7},
+        "output_token_details": {"text_tokens": 12, "audio_tokens": 20},
+        "plugins": {"search": {"count": 2, "strategy": "standard", "sources": ["doc-1"]}},
+    }
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_usage"}},
+            {"type": "response.done", "response": {"id": "resp_usage"}, "usage": usage},
+        ]
+    )
+
+    await rt._process_events()
+
+    assert not [event for event in rt.output.peek() if isinstance(event, RealtimeAgentTranscript) and event.mode == "final" and event.text == ""]
+    snapshot = rt._qwen_response_snapshot()
+    assert snapshot["response"] == "completed"
+    assert snapshot["usage"] == "usage_parsed"
+    assert snapshot["search"] == "search_usage_seen"
+    usage_snapshot = rt._qwen_usage_snapshot()
+    assert usage_snapshot["response_id"] == "resp_usage"
+    assert usage_snapshot["total_tokens"] == 42
+    assert usage_snapshot["input_tokens"] == 10
+    assert usage_snapshot["output_tokens"] == 32
+    assert usage_snapshot["input_token_details"] == {"audio_tokens": 7}
+    assert usage_snapshot["output_token_details"] == {"text_tokens": 12, "audio_tokens": 20}
+    assert usage_snapshot["raw_usage"] == usage
+    assert usage_snapshot["search_usage"] == {"count": 2, "strategy": "standard", "sources": ["doc-1"]}
+
+
+@pytest.mark.contract
+async def test_response_done_usage_parse_failure_retains_raw_payload(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "usage parse failure"
+    invalid_usage = {"total_tokens": "not-an-int"}
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.append(
+        {
+            "type": "response.done",
+            "response": {"id": "resp_bad_usage"},
+            "usage": invalid_usage,
+        }
+    )
+
+    await rt._process_events()
+
+    snapshot = rt._qwen_response_snapshot()
+    usage_snapshot = rt._qwen_usage_snapshot()
+    assert snapshot["usage"] == "usage_parse_failed"
+    assert usage_snapshot["response_id"] == "resp_bad_usage"
+    assert usage_snapshot["raw_usage"] == invalid_usage
+    assert usage_snapshot["parse_error"] == "token count must be an int or None, got str"
+
+
+@pytest.mark.contract
+async def test_response_lifecycle_events_update_state_projection(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "lifecycle"
+
+    await rt.connect()
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_lifecycle"}},
+            {
+                "type": "response.output_item.added",
+                "response_id": "resp_lifecycle",
+                "item": {"id": "item_1"},
+            },
+            {
+                "type": "conversation.item.created",
+                "response_id": "resp_lifecycle",
+                "item": {"id": "conv_item_1"},
+            },
+            {
+                "type": "response.content_part.added",
+                "response_id": "resp_lifecycle",
+                "item_id": "item_1",
+                "part": {"type": "audio"},
+            },
+            {
+                "type": "response.content_part.done",
+                "response_id": "resp_lifecycle",
+                "item_id": "item_1",
+                "part": {"type": "audio"},
+            },
+            {
+                "type": "response.output_item.done",
+                "response_id": "resp_lifecycle",
+                "item": {"id": "item_1"},
+            },
+            {"type": "response.done", "response": {"id": "resp_lifecycle"}},
+        ]
+    )
+
+    await rt._process_events()
+
+    assert rt._qwen_response_snapshot() == {
+        "response_id": "resp_lifecycle",
+        "item_id": "item_1",
+        "conversation_item_id": "conv_item_1",
+        "content_part_type": "audio",
+        "response": "completed",
+        "audio_output": "no_audio_output",
+        "user_transcript": "user_transcript_empty",
+        "agent_transcript": "agent_transcript_empty",
+        "usage": "usage_absent",
+        "search": "search_usage_missing",
+    }
+
+
+@pytest.mark.contract
+async def test_user_input_audio_transcription_delta_and_completed_emit_transcripts(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "user transcript"
+    participant = fake_participant()
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm(), participant=participant)
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "conversation.item.input_audio_transcription.delta", "delta": "user "},
+            {"type": "conversation.item.input_audio_transcription.completed", "transcript": "user final"},
+        ]
+    )
+
+    await rt._process_events()
+
+    user_transcripts = [event for event in rt.output.peek() if isinstance(event, RealtimeUserTranscript)]
+    assert [(event.mode, event.text) for event in user_transcripts] == [
+        ("delta", "user "),
+        ("final", "user final"),
+    ]
+    assert rt._qwen_response_snapshot()["user_transcript"] == "user_transcript_final"
 
 
 @pytest.mark.contract
