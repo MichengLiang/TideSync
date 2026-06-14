@@ -66,6 +66,9 @@ class FakeQwenClient:
     async def send_frame(self, frame_bytes: bytes) -> None:
         self.events.append({"type": "input_image_buffer.append", "image": "fake-image"})
 
+    async def cancel_response(self) -> None:
+        self.events.append({"type": "response.cancel"})
+
 
 def fake_pcm() -> PcmData:
     return PcmData(sample_rate=16000, format="s16", samples=np.zeros(160, dtype=np.int16))
@@ -669,6 +672,7 @@ async def test_response_lifecycle_events_update_state_projection(
         "agent_transcript": "agent_transcript_empty",
         "usage": "usage_absent",
         "search": "search_usage_missing",
+        "error": "no_error",
     }
 
 
@@ -698,6 +702,171 @@ async def test_user_input_audio_transcription_delta_and_completed_emit_transcrip
         ("final", "user final"),
     ]
     assert rt._qwen_response_snapshot()["user_transcript"] == "user_transcript_final"
+
+
+@pytest.mark.contract
+async def test_speech_started_interrupts_active_response_and_flushes_local_audio(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "barge in"
+    participant = fake_participant()
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm(), participant=participant)
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_1"}},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta()},
+            {"type": "response.audio_transcript.delta", "response_id": "resp_1", "delta": "partial"},
+            {"type": "input_audio_buffer.speech_started"},
+        ]
+    )
+
+    await rt._process_events()
+
+    events = rt.output.peek()
+    assert any(isinstance(event, RealtimeUserSpeechStarted) for event in events)
+    interrupted_audio = [event for event in events if isinstance(event, RealtimeAudioOutputDone) and event.interrupted]
+    interrupted_agent = [event for event in events if isinstance(event, RealtimeAgentSpeechEnded) and event.interrupted]
+    assert len(interrupted_audio) == 1
+    assert len(interrupted_agent) == 1
+    assert interrupted_audio[0].response_id == "resp_1"
+    assert interrupted_agent[0].response_id == "resp_1"
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+        "response.cancel",
+    ]
+    assert rt._qwen_response_snapshot()["response"] == "interrupted"
+    assert rt._qwen_response_snapshot()["audio_output"] == "audio_flush_emitted"
+    assert rt._qwen_response_snapshot()["agent_transcript"] == "transcript_interrupted_boundary"
+    assert rt._qwen_interruption_snapshot()["interrupted_response_ids"] == ["resp_1"]
+
+
+@pytest.mark.contract
+async def test_cancel_error_does_not_block_local_flush_or_stale_isolation(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "cancel error"
+    participant = fake_participant()
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm(), participant=participant)
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_1"}},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta()},
+            {"type": "input_audio_buffer.speech_started"},
+            {
+                "type": "error",
+                "event_id": "evt_cancel_1",
+                "error": {
+                    "type": "invalid_request_error",
+                    "code": "no_cancellable_response",
+                    "message": "No cancellable response found",
+                    "param": "response.cancel",
+                },
+            },
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta(b"\x02\x00")},
+        ]
+    )
+
+    await rt._process_events()
+
+    events = rt.output.peek()
+    assert len([event for event in events if isinstance(event, RealtimeAudioOutputDone) and event.interrupted]) == 1
+    assert len([event for event in events if isinstance(event, RealtimeAudioOutput) and event.response_id == "resp_1"]) == 1
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+        "response.cancel",
+    ]
+    assert rt._qwen_response_snapshot()["response"] == "interrupted"
+    assert rt._qwen_response_snapshot()["audio_output"] == "stale_audio_blocked"
+    cancel_error = rt._qwen_cancel_error_snapshot()
+    assert cancel_error == {
+        "event_id": "evt_cancel_1",
+        "type": "invalid_request_error",
+        "code": "no_cancellable_response",
+        "message": "No cancellable response found",
+        "param": "response.cancel",
+    }
+    assert rt._qwen_interruption_snapshot()["interrupted_response_ids"] == ["resp_1"]
+
+
+@pytest.mark.contract
+async def test_stale_audio_and_transcript_deltas_after_interrupt_are_blocked(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "stale deltas"
+    participant = fake_participant()
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm(), participant=participant)
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_1"}},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta()},
+            {"type": "response.audio_transcript.delta", "response_id": "resp_1", "delta": "before "},
+            {"type": "input_audio_buffer.speech_started"},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta(b"\x03\x00")},
+            {"type": "response.audio_transcript.delta", "response_id": "resp_1", "delta": "after"},
+            {"type": "response.audio_transcript.done", "response_id": "resp_1", "transcript": "before after"},
+            {"type": "response.done", "response": {"id": "resp_1"}},
+        ]
+    )
+
+    await rt._process_events()
+
+    events = rt.output.peek()
+    assert [event.response_id for event in events if isinstance(event, RealtimeAudioOutput)] == ["resp_1"]
+    assert [(event.mode, event.text) for event in events if isinstance(event, RealtimeAgentTranscript)] == [("delta", "before ")]
+    snapshot = rt._qwen_response_snapshot()
+    assert snapshot["response"] == "interrupted"
+    assert snapshot["audio_output"] == "stale_audio_blocked"
+    assert snapshot["agent_transcript"] == "transcript_interrupted_boundary"
+    stale_snapshot = rt._qwen_interruption_snapshot()
+    assert stale_snapshot["stale_audio_blocked"] == 1
+    assert stale_snapshot["stale_transcript_blocked"] == 2
+
+
+@pytest.mark.contract
+async def test_follow_up_response_after_interrupt_is_not_treated_as_stale(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "follow up"
+    participant = fake_participant()
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm(), participant=participant)
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_1"}},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta()},
+            {"type": "input_audio_buffer.speech_started"},
+            {"type": "response.created", "response": {"id": "resp_2"}},
+            {"type": "response.audio.delta", "response_id": "resp_2", "delta": qwen_audio_delta(b"\x04\x00")},
+            {"type": "response.audio_transcript.delta", "response_id": "resp_2", "delta": "new"},
+        ]
+    )
+
+    await rt._process_events()
+
+    events = rt.output.peek()
+    assert [event.response_id for event in events if isinstance(event, RealtimeAudioOutput)] == [
+        "resp_1",
+        "resp_2",
+    ]
+    assert [(event.mode, event.text) for event in events if isinstance(event, RealtimeAgentTranscript)] == [("delta", "new")]
+    assert rt._qwen_response_snapshot()["response_id"] == "resp_2"
 
 
 @pytest.mark.contract
