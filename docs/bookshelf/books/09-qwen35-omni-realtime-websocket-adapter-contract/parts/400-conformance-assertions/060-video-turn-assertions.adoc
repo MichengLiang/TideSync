@@ -1,0 +1,80 @@
+[#video-turn-assertions.assertion]
+== 视频与输入轮次断言
+
+视频与输入轮次断言验证图片发送是否绑定当前输入轮次。
+
+[#image-not-sent-before-turn-audio.assertion, normative=must]
+=== 当前轮音频前不发送图片
+
+前置状态:: 有视频 track；当前输入轮次状态为 `turn_empty`。
+
+输入事件或动作:: VideoForwarder 产生帧。
+
+期望 adapter 行为:: 不发送 `input_image_buffer.append`；视频状态保持等待当前轮音频。
+
+期望 core 投影:: 无。
+
+期望 client 事件:: 无图片 append。
+
+不符合表现:: 使用历史 audio_emitted_once 允许发图；track 重连后立即发图；fake client 收到 image append。
+
+证据要求:: 视频帧发送许可测试。
+
+覆盖对象:: xref:image-append-contract[图片 Append, rel=verifies]；xref:video-frame-state[视频帧状态, rel=verifies]。
+
+[#image-window-closes-after-speech-stopped.assertion, normative=must]
+=== Speech Stopped 后关闭本轮图片窗口
+
+前置状态:: 当前轮次已有音频，视频状态为 `send_allowed`。
+
+输入事件或动作:: fake server 发送 `input_audio_buffer.speech_stopped`，随后 VideoForwarder 产生帧。
+
+期望 adapter 行为:: 输入状态进入 speech_stopped；视频状态进入 `send_closed_for_turn`；不再向本轮发送图片。
+
+期望 core 投影:: emit `RealtimeUserSpeechEnded`。
+
+期望 client 事件:: speech_stopped 后无图片 append。
+
+不符合表现:: speech_stopped 被忽略；图片继续发送到同一轮；用户已停说后旧帧继续污染当前输入。
+
+证据要求:: speech_stopped 后视频帧 replay 测试。
+
+覆盖对象:: xref:input-buffer-events-contract[Input Buffer 事件, rel=verifies]；xref:video-frame-state[视频帧状态, rel=verifies]。
+
+[#image-timing-error-suspends-sending.assertion, normative=must]
+=== 图片时序错误暂停发送
+
+前置状态:: adapter 正在发送视频帧。
+
+输入事件或动作:: fake server 返回图片早于音频或等价输入时序错误。
+
+期望 adapter 行为:: 视频状态进入 `suspended_after_image_timing_error`；停止当前盲发路径；等待新输入轮次满足音频前置条件。
+
+期望 core 投影:: 结构化错误可观察。
+
+期望 client 事件:: 错误后不继续按原 FPS 发送图片。
+
+不符合表现:: 错误只打印日志；继续发图；没有状态收敛；下一帧重复触发同类错误。
+
+证据要求:: error injection 测试和 fake client send log。
+
+覆盖对象:: xref:image-timing-error-contract[图片时序错误, rel=verifies]。
+
+[#track-reconnect-waits-for-current-audio.assertion, normative=must]
+=== Track 重连等待当前轮音频
+
+前置状态:: 视频 track 断开后重连；旧轮次已经结束或状态未知。
+
+输入事件或动作:: 新 track 产生帧。
+
+期望 adapter 行为:: 视频状态进入 `track_reconnected_waiting_audio`；等待当前轮次音频 append 后才允许图片发送。
+
+期望 core 投影:: 无。
+
+期望 client 事件:: 重连后当前轮音频前无图片 append。
+
+不符合表现:: 依赖旧 audio_emitted_once 立即发图；track 重连导致 append image before audio 错误。
+
+证据要求:: track reconnect fake forwarder 测试。
+
+覆盖对象:: xref:video-frame-state[视频帧状态, rel=verifies]。

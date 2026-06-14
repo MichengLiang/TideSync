@@ -1,0 +1,41 @@
+[#appendix-structured-surface]
+= 附录 D：结构化表面约定
+
+本书使用稳定标题、role、rel 和 `normative` 字段表达可维护合同。
+
+[#appendix-role-vocabulary]
+== Role 词表
+
+[horizontal]
+concept:: 概念定义或人工制品身份。
+domain:: 已确认事实、源码事实、官方合同事实或运行事实。
+goal:: 期望改变和利益相关者目标。
+requirement:: 统摄性要求。
+boundary:: 当前对象、相邻对象或未知项边界。
+contract:: 可控机器规约、公共契约、证据契约或治理规则。
+state:: adapter 状态集合。
+assertion:: 符合性断言。
+nonconformance:: 不符合案例。
+
+role 标明标题身份，不替代正文判断。
+
+[#appendix-rel-vocabulary]
+== Rel 词表
+
+[horizontal]
+verifies:: 当前断言或覆盖条目验证目标契约、状态或要求。
+violates:: 当前不符合案例违反目标断言、契约、状态或要求。
+covers:: 当前覆盖映射条目覆盖目标断言或契约。
+depends-on:: 当前判断依赖目标章节提供的事实或规则。
+constrains:: 当前章节约束目标对象的合法范围。
+defines:: 当前章节定义目标对象。
+
+[#appendix-normative-vocabulary]
+== Normative 字段
+
+[horizontal]
+must:: 核心合同。失败时，当前 adapter 不能核心符合。
+should:: 强要求。失败时，PR 必须写偏离声明。
+may:: 声明后适用的扩展能力。
+
+解释性章节、事实章节和普通例子不使用 `normative` 字段。

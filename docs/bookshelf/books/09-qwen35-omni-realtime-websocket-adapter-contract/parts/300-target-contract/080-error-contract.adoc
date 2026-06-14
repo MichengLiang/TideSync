@@ -1,0 +1,37 @@
+[#error-contract.contract]
+== 错误契约
+
+错误契约定义 adapter 如何处理 Qwen 服务端错误、连接错误、状态机错误和本地执行错误。错误处理是状态规约，不是日志装饰。
+
+[#structured-error-contract.contract, normative=must]
+=== 结构化错误
+
+Adapter 必须保留 Qwen `error` 事件的结构化字段：`event_id`、`error.type`、`error.code`、`error.message`、`error.param`。若 core `LLMErrorEvent` 不足以承载这些字段，adapter 必须提供等价 metadata、测试事件或错误对象。
+
+错误字符串可以作为人类可读摘要存在，但不能替代结构化字段。
+
+[#recoverability-contract.contract, normative=must]
+=== 可恢复性
+
+Adapter 必须区分可恢复错误和终止错误。连接关闭 1011、1012、1013、1014 可以进入重连路径；鉴权、无效模型、无效 session 配置可以进入 failed 状态；图片时序错误可以收敛到视频发送暂停并等待新输入轮次。
+
+可恢复错误必须定义恢复后哪些状态被清理。重连后不能沿用旧 response id、旧输入轮次许可或旧本地音频输出状态。
+
+[#image-timing-error-contract.contract, normative=must]
+=== 图片时序错误
+
+当服务端返回图片早于音频或等价输入时序错误时，adapter 必须进入 `suspended_after_image_timing_error` 或等价视频状态，停止当前盲发路径，直到新的输入轮次满足图片发送许可。
+
+Adapter 不得在记录错误后继续按原 FPS 向同一非法轮次发送图片。
+
+[#tool-error-contract.contract, normative=must]
+=== 工具错误
+
+工具 schema 错误、未知工具名、参数 JSON 解析错误和工具执行异常必须进入工具错误状态。工具错误必须生成可解释工具结果或终止当前 response，并在符合性证据中可见。
+
+工具错误不得阻塞 WebSocket reader，不得让 function call 永久 pending。
+
+[#usage-error-contract.contract, normative=should]
+=== Usage 错误
+
+Usage 缺失不一定构成核心失败，因为服务端可能在某些错误或取消路径不返回 usage。Usage payload 存在但解析失败时，实现必须记录 parse failure，保留 raw payload，并进入偏离或错误证据。

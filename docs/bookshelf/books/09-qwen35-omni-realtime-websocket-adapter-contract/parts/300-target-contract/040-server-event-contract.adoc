@@ -1,0 +1,70 @@
+[#server-event-contract.contract]
+== 服务端事件契约
+
+服务端事件契约定义 adapter 必须处理的 Qwen WebSocket 服务端事件集合。每个事件必须改变状态、产生 core 投影、更新 metrics、发送客户端事件或进入结构化错误；不能只打印日志。
+
+[#session-events-contract.contract, normative=must]
+=== Session 事件
+
+Adapter 必须处理 `session.created` 和 `session.updated`。成功事件应确认会话配置已被服务端接受。配置错误返回 `error` 时，adapter 必须保留结构化错误字段。
+
+`session.created` 不等同所有配置已正确应用。若 Qwen 在 `session.updated` 中返回实际 session 配置，adapter 测试应断言关键字段与目标配置一致或登记服务端归一化差异。
+
+[#input-buffer-events-contract.contract, normative=must]
+=== Input Buffer 事件
+
+Adapter 必须处理 `input_audio_buffer.speech_started`、`input_audio_buffer.speech_stopped` 和 `input_audio_buffer.committed`。
+
+`speech_started` 必须 emit `RealtimeUserSpeechStarted`，并在存在当前或本地仍可播放的 agent 输出时触发打断契约。
+
+`speech_stopped` 必须 emit `RealtimeUserSpeechEnded`，并关闭当前输入轮次的图片追加窗口。
+
+`committed` 必须把当前输入轮次推进到等待响应状态，并阻止继续向该轮次追加图片。
+
+[#response-lifecycle-events-contract.contract, normative=must]
+=== Response Lifecycle 事件
+
+Adapter 必须处理 `response.created`、`response.output_item.added`、`conversation.item.created`、`response.content_part.added`、`response.content_part.done`、`response.output_item.done` 和 `response.done`。这些事件共同构成 response、item、content 和 finalization 边界。
+
+`response.created` 必须绑定当前 response id。首个可输出事件或 response.created 必须触发 `RealtimeAgentSpeechStarted`，具体触发点必须由实现保持一致，并在测试中固定。
+
+`response.done` 必须关闭当前 response 状态，解析 usage，处理搜索 usage，并清理未完成边界。它不能用空 assistant transcript final 替代真实 transcript done。
+
+[#audio-output-events-contract.contract, normative=must]
+=== 音频输出事件
+
+Adapter 必须处理 `response.audio.delta` 和 `response.audio.done`。`response.audio.delta` 必须解码为 24 kHz PCM，并以当前有效 response id 发送 `RealtimeAudioOutput`。已取消、已中断或过期 response 的音频 delta 不得进入可播放输出。
+
+`response.audio.done` 必须发送 `RealtimeAudioOutputDone(interrupted=False)` 或等价完成事件，使 Vision Agents flow 能发出 final audio boundary。音频完成不得只依赖本地播放队列自然耗尽。
+
+[#transcript-events-contract.contract, normative=must]
+=== 转写事件
+
+Adapter 必须处理 `conversation.item.input_audio_transcription.delta` 和 `conversation.item.input_audio_transcription.completed`。delta 进入 `RealtimeUserTranscript(mode=delta)`；completed 进入 `RealtimeUserTranscript(mode=final)`。
+
+Adapter 必须处理 `response.audio_transcript.delta` 和 `response.audio_transcript.done`。delta 进入 `RealtimeAgentTranscript(mode=delta)`；done 进入 `RealtimeAgentTranscript(mode=final)`，并使用服务端提供的完整文本或本地累计文本。空 final 只能在服务端确实返回空文本时出现。
+
+若 adapter 声明支持 text-only 输出，必须处理 `response.text.delta` 和 `response.text.done`，并映射到 agent transcript。
+
+[#function-call-events-contract.contract, normative=must]
+=== 工具调用事件
+
+Adapter 必须处理 `response.function_call_arguments.delta` 和 `response.function_call_arguments.done`。delta 只作为观察和累计状态；done 是工具调用的完整参数源。
+
+done 事件必须提供 name、arguments 和 call_id。adapter 必须解析 arguments JSON，调用 FunctionRegistry，生成工具结果，发送 `conversation.item.create(function_call_output)`，再发送 `response.create`。
+
+工具调用期间 WebSocket reader 不得被同步工具执行阻塞。工具执行应使用后台任务或等价异步机制，并保留 call_id 与 response id 的关联。
+
+[#usage-events-contract.contract, normative=must]
+=== Usage 事件
+
+Adapter 必须从 `response.done` 中解析 usage。usage 必须保留 total tokens、input tokens、output tokens、input token details、output token details 和原始 raw usage。
+
+当 usage 中包含 `plugins.search` 时，adapter 必须保留该结构。搜索 usage 不能被普通 token usage 抹掉。
+
+[#error-events-contract.contract, normative=must]
+=== Error 事件
+
+Adapter 必须处理 Qwen `error` 事件，并保留 `error.type`、`error.code`、`error.message`、`error.param` 和 `event_id`。结构化字段必须进入测试可观察对象、日志或 LLMErrorEvent metadata 的等价表面。
+
+错误事件必须影响状态机。图片时序错误影响图片发送许可；session配置错误影响会话可用状态；工具错误影响工具调用状态；无可取消响应错误影响 cancel 状态但不取消本地打断收敛。

@@ -1,0 +1,32 @@
+[#expected-change.goal]
+== 期望改变
+
+期望改变描述本书对象应当使问题世界发生的变化。它不是实施顺序，也不是功能愿望清单。
+
+[#central-expected-change.requirement, normative=must]
+=== 中心期望改变
+
+TideSync 必须拥有一个可审查、可运行、可测试、可验收的 Qwen3.5 Omni Realtime WebSocket adapter 源码对象，使 Qwen3.5 Omni Realtime 官方 WebSocket contract 能够通过 Vision Agents core 正确服务 TideSync 的实时全模态视频通话体验。
+
+这个改变成立后，开发者不能用“模型支持”替代 adapter 支持，不能用“WebSocket 已连接”替代响应生命周期完整，不能用“发送了 response.cancel”替代打断完成，不能用“external 已改”替代 TideSync PR，不能用“演示成功一次”替代断言证据。
+
+[#native-adapter-outcome.requirement, normative=must]
+=== Adapter 层结果
+
+符合实现必须把 Qwen WebSocket 事件变成 Vision Agents core 可消费的事件、音频输出、转写、控制语义和错误语义。`input_audio_buffer.speech_started` 必须改变用户 turn、本地音频输出和当前响应命运；`response.audio.done` 必须形成音频输出完成边界；`response.audio_transcript.done` 必须形成助手转写完成边界；工具调用、搜索 usage 和结构化错误必须保留它们的 Qwen 语义。
+
+符合实现不得把 Qwen WebSocket contract 压缩成“音频输入、图片输入、音频输出”三项。实时交互的可打断性、上下文轮次、错误恢复、外部工具、搜索计量和响应边界都依赖 adapter 层的状态与事件映射。
+
+[#qa-outcome.requirement, normative=must]
+=== 验收层结果
+
+测试与验收工程师必须能够依据 xref:adapter-assertion-surface[断言表面, rel=depends-on]逐条判定实现。每条核心断言必须给出前置状态、输入事件或用户动作、期望 adapter 输出、期望 Vision Agents core 事件、期望 client 发送事件、禁止行为和证据要求。
+
+验收不得依赖单一演示。真实通话、录屏和日志可以补充说明现象；核心证据来自 xref:test-evidence-contract[测试证据契约, rel=depends-on]定义的可重复测试、event replay、fake WebSocket、运行时 import 路径断言、PR diff 和符合性声明。
+
+[#project-governance-outcome.requirement, normative=must]
+=== 治理层结果
+
+项目负责人必须能够区分四类状态：核心符合、强要求偏离、扩展能力未声明、未知项阻塞。开发者不能把未知项写成完成项，也不能把非当前对象写成当前承诺。
+
+符合实现必须公开 Qwen 官方文档与上游源码之间的差异。例如本地官方文档中的 `pcm` 与当前 adapter 的 `pcm16`/`pcm24` 差异、Qwen3.5 输入转写模型与当前 adapter 默认 `gummy-realtime-v1` 的差异、`response.cancel` 后 stale delta 行为的未知，都必须进入证据和未知项表面。

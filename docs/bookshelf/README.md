@@ -5,6 +5,7 @@ This directory maintains the TideSync realtime omnimodal video-call experience s
 ## Books
 
 - `books/08-realtime-omnimodal-call-experience-spec/book.adoc` is the main specification. It defines the experience object, constitutive conditions, user journeys, public projections, black-box assertions, governance boundaries, and conformance statements for realtime omnimodal AI video and voice calls.
+- `books/09-qwen35-omni-realtime-websocket-adapter-contract/book.adoc` defines the TideSync-controlled Vision Agents Qwen3.5 Omni Realtime WebSocket adapter contract, including source identity, runtime loading, Qwen event mapping, state machines, conformance assertions, evidence requirements, and PR governance.
 - `books/07-structured-writing-conventions/book.adoc` records the structured writing conventions used by the main specification, including stable heading IDs, `role`, `rel`, additional fields, and cross-reference practices.
 
 `catalog.adoc` is the bookshelf entry point. It should route readers by role, judgment question, and maintained book.

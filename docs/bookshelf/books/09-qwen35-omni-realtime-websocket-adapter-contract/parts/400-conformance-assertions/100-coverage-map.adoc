@@ -1,0 +1,41 @@
+[#coverage-map.contract]
+== 覆盖映射
+
+覆盖映射把断言连接到对象合同。评审者可以通过本表检查核心合同是否都有断言。
+
+[cols="2,2,2", options="header"]
+|===
+|合同对象 |核心断言 |证据类型
+
+|xref:source-and-runtime-contract[受控源码与运行路径, rel=covers]
+|xref:adapter-source-in-tidesync-pr[Adapter 源码进入 TideSync PR]；xref:runtime-imports-controlled-adapter[运行时加载受控 Adapter]；xref:dependency-resolution-reproducible[依赖解析可复现]
+|PR diff、import 路径测试、安装测试
+
+|xref:session-config-contract[Session 配置, rel=covers]
+|xref:session-update-uses-qwen35-contract-values[Session Update 使用 Qwen3.5 合同值]；xref:semantic-vad-configurable[Semantic VAD 可配置]；xref:manual-mode-configurable[Manual 模式可表达]；xref:tools-search-mutually-exclusive[Tools 与 Search 互斥]
+|fake WebSocket 发送记录、配置测试
+
+|xref:input-buffer-events-contract[Input buffer 与 turn, rel=covers]
+|xref:speech-events-map-to-user-turn[Speech Events 映射用户 Turn]
+|event replay、core event 捕获
+
+|xref:audio-output-events-contract[音频输出, rel=covers]；xref:transcript-events-contract[transcript, rel=covers]
+|xref:audio-delta-and-done-map-to-output[Audio Delta 与 Done 映射音频输出]；xref:transcript-delta-and-done-map-to-final[Transcript Delta 与 Done 映射转写边界]
+|audio fixture、transcript replay
+
+|xref:interruption-contract[打断, rel=covers]
+|xref:speech-started-interrupts-current-response[Speech Started 中断当前响应]；xref:cancel-error-does-not-block-local-flush[Cancel Error 不阻止本地 Flush]；xref:stale-delta-after-interrupt-blocked[打断后旧 Delta 被屏蔽]
+|barge-in replay、fake client send log
+
+|xref:video-frame-state[视频轮次, rel=covers]
+|xref:image-not-sent-before-turn-audio[当前轮音频前不发送图片]；xref:image-window-closes-after-speech-stopped[Speech Stopped 后关闭本轮图片窗口]；xref:image-timing-error-suspends-sending[图片时序错误暂停发送]；xref:track-reconnect-waits-for-current-audio[Track 重连等待当前轮音频]
+|video fake forwarder、error injection
+
+|xref:tools-search-usage-contract[工具、搜索、usage, rel=covers]
+|xref:tool-schema-sent-in-session-update[Tool Schema 注入 Session Update]；xref:function-call-executes-and-returns-output[Function Call 执行并回传结果]；xref:tool-error-returns-explainable-output[工具错误回传可解释结果]；xref:search-config-sent-and-usage-retained[Search 配置发送且 Usage 保留]；xref:response-done-parses-usage[Response Done 解析 Usage]；xref:usage-parse-error-retains-raw[Usage 解析失败保留 Raw Payload]
+|function call replay、search usage fixture
+
+|xref:error-contract[错误, rel=covers]
+|xref:qwen-error-keeps-structured-fields[Qwen Error 保留结构化字段]；xref:recoverable-connection-resets-state[可恢复连接错误重置状态]；xref:session-config-error-fails-session[Session 配置错误使会话不可用]；xref:usage-parse-error-retains-raw[Usage 解析失败保留 Raw Payload]
+|error replay、reconnect fake WebSocket
+|===

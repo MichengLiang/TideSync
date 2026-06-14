@@ -1,0 +1,32 @@
+[#source-and-runtime-contract.contract]
+== 源码与运行时契约
+
+源码与运行时契约确保实现物进入 TideSync 可审查系统。没有该契约，adapter 行为无法被 TideSync PR 追责。
+
+[#controlled-source-contract.contract, normative=must]
+=== 受控源码
+
+Qwen adapter 派生源码必须位于 TideSync 仓库内，并出现在 TideSync PR diff 中。该源码不得只存在于 external、site-packages、本机未提交路径、外部远程 fork 或嵌套 git 仓库。
+
+受控源码目录必须包含上游来源说明。来源说明记录上游仓库、来源 tag、来源 commit、导入日期、导入范围、删减范围、本地修改原则和同步规则。来源说明不是装饰；它让维护者判断本地派生与上游的差异。
+
+[#runtime-import-contract.contract, normative=must]
+=== 运行时加载
+
+TideSync 运行时必须加载受控源码中的 Qwen adapter。符合实现必须提供测试或命令输出，证明 `vision_agents.plugins.qwen` 或等价 provider 模块路径位于 TideSync 受控源码目录。
+
+PR 中新增源码但运行时仍加载 PyPI 上游包时，源码不构成当前对象完成。PR 中修改 `pyproject.toml` 但没有 import 路径证据时，依赖解析不构成验收事实。
+
+[#dependency-contract.contract, normative=must]
+=== 依赖解析
+
+TideSync 的 Python 依赖解析必须显式指向受控 adapter 源码。该指向的公共证据包括依赖配置、锁文件、安装命令和 import 路径测试；这些证据必须共同证明本地开发环境、测试环境和 CI 环境加载同一源码对象。
+
+依赖解析不得要求开发者在本机手动设置未提交 `PYTHONPATH`。测试环境和 CI 环境必须能重复加载同一源码对象。
+
+[#upstream-compatibility-contract.contract, normative=should]
+=== 上游兼容边界
+
+受控源码应保留上游 Vision Agents 的包结构和公共 import 表面，除非本书合同要求改变。保留结构服务两类消费者：开发者能比较上游差异，维护者能评估未来上游合并。
+
+删减上游文件时，删减必须依据运行、测试、打包和审查边界。纯示例、无关插件、大型资产和非当前 transport 代码可以不进入受控源码；任何删减都必须在来源说明中登记。

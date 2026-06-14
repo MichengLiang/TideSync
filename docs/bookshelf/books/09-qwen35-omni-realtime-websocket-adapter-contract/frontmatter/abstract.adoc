@@ -1,0 +1,5 @@
+本书定义 TideSync 仓库内受控的 Vision Agents Qwen3.5 Omni Realtime WebSocket adapter 派生源码对象，以及围绕该源码对象成立的配置契约、事件契约、状态机契约、错误契约、测试契约、PR 证据契约和符合性声明。
+
+本书服务五类消费者：开发者用它确定必须实现和不得偷换的 adapter 行为；测试与验收工程师用它逐条判定实现是否符合；项目负责人用它保护“原生一等公民支持”不被 demo、模型能力宣传或外层配置替代；安全、运营与成本治理负责人用它审查工具、搜索、usage 和错误投影；维护者用它追溯上游来源、运行时依赖路径、证据材料和未知项边界。
+
+本书不定义实时全模态视频通话体验本身。该体验由 xref:../08-realtime-omnimodal-call-experience-spec/book.adoc#realtime-omnimodal-call-experience[08 号书的体验对象]定义。本书把 08 号书中需要 Qwen3.5 Omni Realtime WebSocket adapter 承担的体验条件，转写为 adapter 层可实现、可观察、可测试、可审查的机器规约。

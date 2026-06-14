@@ -1,0 +1,46 @@
+[#qwen-official-contract.domain]
+== Qwen 官方 WebSocket 合同
+
+Qwen 官方合同是 adapter 规约的协议来源。当前书稿只使用已被本地文档或官方页面确认的合同面；文档冲突或 live 未验证行为进入未知项。
+
+[#qwen-connection-contract.domain]
+=== 连接与会话
+
+Qwen-Omni-Realtime WebSocket 连接使用 realtime WebSocket 地址，并在查询参数中指定模型。请求头使用 Bearer token。连接建立后，客户端发送 `session.update` 配置会话。
+
+`session.update` 的核心字段包括 `modalities`、`voice`、`instructions`、`input_audio_format`、`output_audio_format`、`input_audio_transcription` 和 `turn_detection`。本地 Qwen3.5 文档示例使用 `input_audio_format: "pcm"` 和 `output_audio_format: "pcm"`。当前上游 adapter 使用 `pcm16` 和 `pcm24`。该差异是合同差异，不是可忽略实现细节。
+
+[#qwen-turn-detection-contract.domain]
+=== VAD 与 Manual
+
+Qwen WebSocket 支持 VAD 模式和 Manual 模式。VAD 模式通过 `turn_detection.type` 表达，可取 `server_vad` 或 `semantic_vad`。本地文档写明 Qwen3.5 Omni Realtime 推荐 `semantic_vad`。
+
+Manual 模式通过把 `turn_detection` 设置为 `null` 表达。Manual 模式下，客户端显式发送 `input_audio_buffer.commit` 和 `response.create`，并可发送 `input_audio_buffer.clear` 清理缓冲。WebRTC 不支持 Manual；该限制属于 Qwen 原生 WebRTC 相邻对象，不改变 WebSocket contract。
+
+[#qwen-input-contract.domain]
+=== 输入事件
+
+WebSocket 音频输入使用 `input_audio_buffer.append`。音频数据为 Base64 编码的 PCM 数据，输入约束是 16 kHz 单声道 PCM。WebSocket 图片输入使用 `input_image_buffer.append`。图片输入存在时序约束：VAD 模式下应在 `input_audio_buffer.speech_stopped` 前发送图片；Manual 模式下图片发送依赖当前输入轮次中已经存在音频 append。
+
+这些约束说明，图片发送许可是“当前输入轮次”的状态，不是“这个 Python 对象曾经发送过音频”的状态。adapter 若只使用全局 once 布尔值，就无法表达当前轮次的 audio-before-image 合同。
+
+[#qwen-output-contract.domain]
+=== 输出事件
+
+WebSocket 文本输出使用 `response.text.delta` 和 `response.text.done`。WebSocket 文本加音频输出中，音频通过 `response.audio.delta` 返回，音频完成通过 `response.audio.done` 标记；音频对应转写通过 `response.audio_transcript.delta` 和 `response.audio_transcript.done` 返回。
+
+响应生命周期还包括 `response.created`、`response.output_item.added`、`conversation.item.created`、`response.content_part.added`、`response.content_part.done`、`response.output_item.done` 和 `response.done`。这些事件为 adapter 提供 response、item、content、audio、text 和 finalization 边界。
+
+[#qwen-tools-search-contract.domain]
+=== 工具、搜索与 usage
+
+Qwen3.5 Omni Realtime 支持工具调用。客户端通过 `session.update.session.tools` 注入工具定义。工具定义使用函数 schema。服务端通过 `response.function_call_arguments.delta` 和 `response.function_call_arguments.done` 输出工具调用参数；`done` 事件提供完整 `name`、`arguments` 和 `call_id`。客户端执行工具后，用 `conversation.item.create` 回传 `function_call_output`，随后发送 `response.create` 触发最终回答。
+
+Qwen-Omni-Realtime 不支持 `tool_choice` 和 `parallel_tool_calls`。联网搜索与工具调用不兼容。搜索通过 `enable_search` 和 `search_options.enable_source` 配置。搜索计量出现在 `response.done.usage.plugins.search`。
+
+[#qwen-error-contract.domain]
+=== 错误事件
+
+Qwen 服务端错误事件顶层类型为 `error`，错误对象包含 `type`、`code`、`message` 和 `param` 等字段。`session.update` 参数错误、无可取消响应的 `response.cancel`、空缓冲 `input_audio_buffer.commit`、无效字段值、工具或搜索配置错误都可能返回错误事件或通用错误码。
+
+本地文档没有封闭所有 Realtime 专属错误码和可恢复性。adapter 合同必须保留结构化错误字段，并定义已知错误对会话状态、输入状态、响应状态和视频发送许可的影响；未知错误码必须进入未知项或保守错误处理路径。

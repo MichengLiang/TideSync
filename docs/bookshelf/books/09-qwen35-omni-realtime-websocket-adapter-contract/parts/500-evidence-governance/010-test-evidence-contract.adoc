@@ -1,0 +1,55 @@
+[#test-evidence-contract.contract]
+== 测试证据契约
+
+测试证据契约规定 adapter 完成声明必须提交哪些可重复证据。证据必须能被 QA、维护者和项目负责人独立审查。
+
+[#static-config-tests.contract, normative=must]
+=== 静态配置测试
+
+静态配置测试必须覆盖 session.update 的目标字段和值域。测试应捕获 fake WebSocket 收到的 `session.update`，断言 model、modalities、voice、instructions、audio format、input transcription、turn detection、tools、search 和互斥规则。
+
+静态配置测试必须包含负向配置。tools 与 search 同时启用、无效 VAD 类型、Manual 与 WebRTC 混淆、缺失必要字段等情况必须产生结构化错误或配置拒绝。
+
+[#event-replay-tests.contract, normative=must]
+=== Event Replay 测试
+
+Event replay 测试必须用固定 Qwen 服务端事件序列驱动 adapter，并断言 adapter 输出、core 投影、client 发送事件和状态变化。
+
+核心 replay 序列包括：正常 VAD 语音响应、用户转写 delta/completed、助手 audio transcript delta/done、audio delta/done、response.done usage、speech_started 打断、cancel error、stale delta、图片时序错误、function call、search usage、session error 和 reconnect。
+
+Replay fixture 必须保留事件原始 payload。测试不得只用简化事件名，否则无法验证 response id、item id、call id、usage 和 error param。
+
+[#fake-websocket-tests.contract, normative=must]
+=== Fake WebSocket 测试
+
+Fake WebSocket 测试必须同时记录 server-to-adapter 事件和 adapter-to-server 事件。它用于验证 adapter 是否发送 `response.cancel`、`conversation.item.create`、`response.create`、`input_audio_buffer.commit`、`input_audio_buffer.clear` 和正确 session.update。
+
+Fake WebSocket 不能只模拟成功路径。它必须支持迟到事件、错误事件、连接关闭和非法配置响应。
+
+[#state-machine-tests.contract, normative=must]
+=== 状态机测试
+
+状态机测试必须覆盖本书定义的封闭状态集合。测试不要求代码中使用同名 enum，但要求可观察地证明这些状态职责成立。
+
+状态机测试必须覆盖跨维度变化。例如 speech_stopped 同时改变输入音频状态、用户 turn 状态和视频发送许可；打断同时改变 response 状态、本地音频状态、agent turn 状态和 transcript 边界；重连同时改变会话状态、输入轮次、response 和视频许可。
+
+[#runtime-path-tests.contract, normative=must]
+=== 运行路径测试
+
+运行路径测试必须证明 TideSync 加载受控 adapter 源码。测试应在项目标准安装命令后执行，并输出或断言 provider 模块路径。
+
+该测试必须进入普通测试套件或 CI 可运行集合。只在开发者本机手动执行的路径打印不满足核心证据要求。
+
+[#live-smoke-tests.contract, normative=should]
+=== 真实服务 Smoke
+
+真实服务 smoke 用于验证官方服务端与本地 fake contract 的一致性。它应覆盖轻量连接、session.update、一次语音响应、一次打断、一次图片输入、一次工具或搜索路径。执行条件包括有效 API key、可接受费用、网络条件和模型服务可用。
+
+缺少 API key 或费用授权时，真实服务 smoke 可以被阻塞登记。阻塞不取消 fake WebSocket 和 event replay 的核心要求。
+
+[#evidence-storage.contract, normative=must]
+=== 证据保存
+
+PR 必须保存测试命令、测试输出摘要、失败项、跳过原因、live 阻塞原因和证据路径。证据可以位于 PR 描述、符合性声明文件或项目约定的测试报告目录。
+
+证据不得只存在于聊天记录或个人终端滚动缓冲。

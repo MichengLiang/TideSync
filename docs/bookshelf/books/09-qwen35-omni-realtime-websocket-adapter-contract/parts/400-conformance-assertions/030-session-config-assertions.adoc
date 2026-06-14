@@ -1,0 +1,80 @@
+[#session-config-assertions.assertion]
+== Session 配置断言
+
+Session 配置断言验证 `session.update` 是否表达 Qwen3.5 WebSocket adapter contract。
+
+[#session-update-uses-qwen35-contract-values.assertion, normative=must]
+=== Session Update 使用 Qwen3.5 合同值
+
+前置状态:: adapter 准备连接 Qwen fake WebSocket。
+
+输入事件或动作:: 调用 adapter connect，捕获发送的 `session.update`。
+
+期望 adapter 行为:: `session.update.session` 包含 model 对应连接参数、`modalities`、`voice`、`instructions`、`input_audio_format`、`output_audio_format`、`input_audio_transcription` 和 `turn_detection`。音频格式合同值使用 `pcm`，或在兼容模式中显式登记与测试服务端接受证据。
+
+期望 core 投影:: `RealtimeConnectedEvent` 或等价连接事件携带 session_config。
+
+期望 client 事件:: WebSocket 发送 `session.update`。
+
+不符合表现:: 仍无说明地发送 `pcm16` 和 `pcm24`；丢失 instructions；未启用 input_audio_transcription；连接事件不暴露 session_config。
+
+证据要求:: fake WebSocket 发送记录和配置断言测试。
+
+覆盖对象:: xref:session-config-contract[Session 配置契约, rel=verifies]。
+
+[#semantic-vad-configurable.assertion, normative=must]
+=== Semantic VAD 可配置
+
+前置状态:: TideSync 或 adapter 配置选择 `semantic_vad`。
+
+输入事件或动作:: 调用 adapter connect，捕获 `session.update`。
+
+期望 adapter 行为:: `session.turn_detection.type` 为 `semantic_vad`，并保留 Qwen 支持的 VAD 参数。
+
+期望 core 投影:: 连接事件中的 session_config 可观察到 semantic_vad。
+
+期望 client 事件:: WebSocket 发送包含 semantic_vad 的 `session.update`。
+
+不符合表现:: adapter 写死 `server_vad`；配置字段存在但发送时被忽略；测试只能检查 Python 对象属性，不能检查发送给 Qwen 的事件。
+
+证据要求:: 配置测试和 fake WebSocket 发送记录。
+
+覆盖对象:: xref:turn-detection-contract[Turn Detection, rel=verifies]。
+
+[#manual-mode-configurable.assertion, normative=must]
+=== Manual 模式可表达
+
+前置状态:: adapter 配置选择 WebSocket Manual 模式。
+
+输入事件或动作:: 调用 adapter connect，发送一段音频后触发提交。
+
+期望 adapter 行为:: `session.turn_detection` 为 `null`；音频 append 后 adapter 能发送 `input_audio_buffer.commit` 和 `response.create`。
+
+期望 core 投影:: 用户 turn 和 agent response 仍通过 core 事件投影。
+
+期望 client 事件:: WebSocket 发送 `session.update`、`input_audio_buffer.append`、`input_audio_buffer.commit`、`response.create`。
+
+不符合表现:: client 有 commit sender 但 provider 没有模式；Manual 配置被忽略；Manual 与 WebRTC 混淆；Manual 模式下图片仍不受音频前置约束。
+
+证据要求:: Manual fake WebSocket 事件测试。
+
+覆盖对象:: xref:turn-detection-contract[Turn Detection, rel=verifies]；xref:client-event-set[客户端事件集合, rel=verifies]。
+
+[#tools-search-mutually-exclusive.assertion, normative=must]
+=== Tools 与 Search 互斥
+
+前置状态:: adapter 配置同时提供 tools 和 enable_search。
+
+输入事件或动作:: 构造 adapter 或调用 connect。
+
+期望 adapter 行为:: adapter 在配置层拒绝该组合，或产生结构化配置错误，不发送非法 `session.update`。
+
+期望 core 投影:: 错误事件可观察。
+
+期望 client 事件:: 不发送同时包含 tools 和 enable_search 的 `session.update`。
+
+不符合表现:: 同时发送 tools 和 enable_search；只依赖服务端报错；错误只出现在日志字符串。
+
+证据要求:: 配置负向测试和 fake WebSocket 发送记录。
+
+覆盖对象:: xref:tools-search-config-contract[Tools 与 Search 配置, rel=verifies]。

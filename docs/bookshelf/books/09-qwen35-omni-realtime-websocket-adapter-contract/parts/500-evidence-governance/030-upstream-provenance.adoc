@@ -1,0 +1,39 @@
+[#upstream-provenance.contract]
+== 上游来源与派生治理
+
+上游来源治理使 TideSync 内 adapter 派生源码可追溯、可比较、可维护。
+
+[#upstream-record.contract, normative=must]
+=== 来源记录
+
+受控源码目录必须包含来源记录。来源记录必须写明：
+
+上游仓库:: `GetStream/Vision-Agents` 或实际导入来源。
+
+来源 tag:: 例如 `v0.6.4`。
+
+来源 commit:: 例如 `9c5efe1`。
+
+导入日期:: 源码进入 TideSync 仓库的日期。
+
+导入范围:: 保留的包、插件、测试、配置和辅助文件。
+
+删减范围:: 未导入的上游目录和原因。
+
+本地修改原则:: 哪些修改服务 Qwen WebSocket adapter contract。
+
+同步规则:: 未来如何比较上游新版本和本地派生差异。
+
+[#source-import-scope.contract, normative=must]
+=== 导入范围
+
+导入范围由运行、测试、打包和审查依赖决定。凡是运行受控 adapter、执行测试、解析包依赖或审查上游差异必须使用的文件，必须进入 TideSync 可审查范围。
+
+无关插件、示例资产、演示文件和非当前 transport 代码可以不进入受控源码；删减必须登记，避免维护者误以为它们不存在于上游。
+
+[#upstream-sync-contract.contract, normative=should]
+=== 上游同步
+
+维护者应能比较 TideSync 派生源码与上游 Vision Agents 的差异。同步记录应说明上游 release 中哪些变化被吸收、哪些被拒绝、哪些与 Qwen adapter contract 冲突。
+
+当上游未来原生修复 Qwen adapter 时，TideSync 不得直接删除本地 contract。必须先用本书断言验证上游行为是否满足 TideSync 对 Qwen3.5 Omni Realtime WebSocket 的合同。

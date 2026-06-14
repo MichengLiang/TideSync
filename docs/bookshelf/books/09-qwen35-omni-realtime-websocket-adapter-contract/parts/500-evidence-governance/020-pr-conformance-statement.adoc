@@ -1,0 +1,41 @@
+[#pr-conformance-statement.contract]
+== PR 符合性声明
+
+PR 符合性声明是开发者交付时必须提交的审查表面。它把实现范围、断言结果、证据、偏离和未知项放在同一处。
+
+[#pr-statement-required.contract, normative=must]
+=== 声明必需性
+
+任何声称完成本书核心合同的 PR 必须包含符合性声明。没有符合性声明的 PR 不得被判定为完成，即使测试通过。
+
+符合性声明可以是 PR 描述中的稳定章节，也可以是仓库内文件。若为仓库内文件，文件路径必须在 PR 描述中引用。
+
+[#pr-statement-fields.contract, normative=must]
+=== 声明字段
+
+符合性声明必须包含以下字段。
+
+实现范围:: 本 PR 修改的 adapter、core、TideSync配置、测试和文档范围。
+
+上游来源:: Vision Agents 来源 tag、commit、导入范围和本地修改摘要。
+
+运行路径证据:: provider 模块 import 路径、安装方式和依赖解析说明。
+
+断言结果:: 本书核心断言逐条结果，包含通过、失败、不适用、阻塞。
+
+测试命令:: 实际运行的命令和输出摘要。
+
+Live 验证:: 已执行 smoke、未执行原因、费用或凭据阻塞。
+
+偏离项:: `should` 失败、条件限制和项目负责人需要知道的风险。
+
+未知项:: 文档冲突、live 未验证、服务端行为未封闭。
+
+回滚影响:: 本 PR 回滚后哪些 TideSync 功能退回上游行为。
+
+[#pr-statement-failure.contract, normative=must]
+=== 声明失败
+
+符合性声明不得把失败项写成“后续优化”。核心 `must` 断言失败时，声明必须标记核心不符合。强要求 `should` 失败时，声明必须标记偏离。
+
+声明不得用“模型支持”“本地体验正常”“演示通过”替代断言结果。断言结果必须绑定证据。

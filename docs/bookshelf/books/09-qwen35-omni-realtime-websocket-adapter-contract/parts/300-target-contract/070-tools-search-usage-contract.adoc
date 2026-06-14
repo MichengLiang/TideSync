@@ -1,0 +1,41 @@
+[#tools-search-usage-contract.contract]
+== 工具、搜索与 Usage 契约
+
+工具、搜索与 usage 契约保证 Qwen3.5 的外部能力和成本计量不会被 adapter 丢失或混淆。
+
+[#tool-schema-contract.contract, normative=must]
+=== 工具 Schema 映射
+
+Adapter 必须把 Vision Agents `ToolSchema` 映射为 Qwen tools 数组。每个工具项必须包含 `type: "function"` 和 `function` 对象。`function` 对象包含工具名、描述和 JSON schema 参数。
+
+Adapter 不得向 Qwen-Omni-Realtime 发送 `tool_choice` 或 `parallel_tool_calls`。这些字段不属于当前 Qwen-Omni-Realtime contract。
+
+[#tool-call-contract.contract, normative=must]
+=== 工具调用执行
+
+Adapter 必须以 `response.function_call_arguments.done` 作为完整工具调用参数来源。`arguments` 必须按 JSON 解析。解析失败进入 `tool_execution_error` 或等价错误状态，并回传可解释工具失败结果。
+
+Adapter 必须调用 Vision Agents FunctionRegistry 或等价受控工具注册表。未注册工具必须形成工具失败结果，不能让调用悬空。
+
+工具执行成功后，adapter 回传工具结果并发送 `response.create`。工具执行失败后，adapter 回传错误结果并发送 `response.create`，除非错误合同明确要求终止响应。
+
+[#search-contract.contract, normative=must]
+=== 搜索配置与互斥
+
+Adapter 必须通过 `enable_search` 表达联网搜索开关，通过 `search_options.enable_source` 表达来源开关。搜索关闭时不得伪造搜索 usage。
+
+Adapter 必须拒绝 tools 与 search 同时启用的配置。该互斥来自 Qwen 官方限制。互斥失败必须在配置或结构化错误中出现，不能作为运行时随机服务端错误被动暴露。
+
+[#usage-contract.contract, normative=must]
+=== Usage 保留
+
+Adapter 必须解析并保留 `response.done` 中的 usage。保留字段包括 total tokens、input tokens、output tokens、input token details、output token details 和 raw usage。
+
+当 usage 包含 `plugins.search` 时，adapter 必须保留搜索计量结构，包括 count、strategy 和服务端返回的其他字段。Usage 解析失败必须进入 usage error 状态，并保留 raw payload 供审查。
+
+[#metrics-projection-contract.contract, normative=should]
+=== Metrics 投影
+
+Adapter 应将 usage 与搜索 usage 投影到 Vision Agents metrics、LLM event metadata、测试记录或符合性声明可读取的表面。投影表面必须服务成本治理和验收审查。
+
+只在 debug 日志中打印 usage 不满足强要求，因为日志不一定进入 PR 证据或测试断言。

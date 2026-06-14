@@ -1,0 +1,47 @@
+[#domain-facts.domain]
+== 领域事实
+
+领域事实描述本书对象介入之前已经存在的现实条件。事实不授权方案；事实为后续规约提供前提。
+
+[#tidesync-experience-dependency.domain]
+=== TideSync 体验依赖
+
+TideSync 的目标体验由 xref:../08-realtime-omnimodal-call-experience-spec/book.adoc#realtime-omnimodal-call-experience[08 号书的实时全模态视频通话体验]定义。该体验要求用户能够在同一会话中提供实时语音、提供当前视觉现场、听到 AI 的自然语音回应、打断 AI 回答、围绕视觉现场继续追问，并通过公共投影理解采集、处理、回应、错误和限制状态。
+
+Qwen WebSocket Adapter 不定义这个体验。它承担这个体验在模型接入层的必要机器规约：把 TideSync 和 Vision Agents 运行时收到的音频、视频、会话动作和外部能力，转换为 Qwen WebSocket 输入；把 Qwen 服务端返回的事件和媒体，转换为 xref:vision-agents-core-carriers[Vision Agents core 承载物, rel=depends-on]能消费的输出、状态和控制语义。
+
+[#qwen-official-capability.domain]
+=== Qwen 官方能力事实
+
+Qwen-Omni-Realtime 官方文档把该系列定义为实时音视频聊天模型，能够理解流式音频和图像输入，并实时生成文本和音频输出。Qwen3.5-Omni-Flash-Realtime 的本地模型摘要列出文本、图片、视频、音频输入以及文本、图片、视频、音频输出，同时标注 Function Calling 和联网搜索能力。
+
+官方 WebSocket contract 使用 `session.update` 配置会话，使用 `input_audio_buffer.append` 发送音频，使用 `input_image_buffer.append` 发送图片，使用响应生命周期事件返回文本、音频、转写、工具调用、usage 和错误。官方文档同时区分 WebSocket 与 WebRTC：WebSocket 音频输出通过 `response.audio.delta` 返回；WebRTC 音频通过 RTP 输出，不通过该事件返回音频。
+
+官方文档列出 `turn_detection.type` 可取 `server_vad` 或 `semantic_vad`。本地文档写明 Qwen3.5 Omni Realtime 推荐 `semantic_vad`。官方文档也定义 WebSocket Manual 模式：`turn_detection` 为 `null`，客户端显式发送 `input_audio_buffer.commit` 和 `response.create`。
+
+[#vision-agents-current-fact.domain]
+=== Vision Agents 当前事实
+
+本地 `external/Vision-Agents` 源码为 v0.6.4，commit `9c5efe1`。该版本 Qwen adapter 只实现 DashScope WebSocket client，不实现 Qwen 原生 WebRTC transport。
+
+当前 Qwen adapter 能建立 WebSocket、发送 `session.update`、发送音频、发送图片、发送 `response.cancel`，并处理基础响应事件。它没有完整处理 Qwen3.5 Omni Realtime WebSocket lifecycle，也没有完整使用 Vision Agents core 已有的 speech、audio done、interrupt 和 flush 抽象。
+
+Vision Agents core 已经存在 `RealtimeAudioOutputDone`、`RealtimeUserSpeechStarted`、`RealtimeUserSpeechEnded`、`RealtimeAgentSpeechStarted`、`RealtimeAgentSpeechEnded` 等事件对象。`RealtimeInferenceFlow` 收到 `RealtimeAudioOutputDone(interrupted=True)` 时，会调用 interrupt，清 transcript、清 `AudioOutputStream`，并向下游发送 `AudioOutputFlush`。Agent audio producer 收到 flush 后，会调用 GetStream audio track 的 flush。
+
+这个事实说明：本地音频打断清理的承载物存在，缺口在 Qwen adapter 没有把 Qwen 服务端打断相关事件投射到这些承载物。该缺口由 xref:interruption-gap[打断投射缺口, rel=depends-on]记录，并由 xref:interruption-contract[打断契约, rel=constrains]约束目标行为。
+
+[#tidesync-current-runtime.domain]
+=== TideSync 当前运行事实
+
+TideSync 当前 `src/tidesync/agent.py` 的默认模型是 `qwen3.5-omni-flash-realtime`，默认 WebSocket 地址是中国内地 DashScope realtime 地址，默认音色是 `Tina`，默认 FPS 是 1。`RealtimeSettings` 只从环境变量读取 model、base_url、voice 和 fps。
+
+TideSync 当前 `create_agent()` 实例化 `qwen.Realtime` 时传入 model、base_url、voice、fps，并固定 `include_video=True`。TideSync 没有暴露 VAD 类型、Manual 模式、搜索、工具、usage、音频格式、输入转写模型或错误策略配置。
+
+TideSync 当前 `pyproject.toml` 依赖 `vision-agents[qwen,getstream]>=0.6.4,<0.7`。在没有 TideSync 内受控源码和依赖解析证明时，运行时 Qwen adapter 行为来自上游包，而不是来自 TideSync PR 中可审查的派生源码。
+
+[#organization-traceability.domain]
+=== 组织可追责事实
+
+TideSync 团队要求所有修改代码有精准 PR，并在 TideSync PR 日志中留痕。workbench 约束同时规定 external 目录用于外部仓库临时参考，不作为本仓库长期项目或可修改实现对象。
+
+因此，Qwen adapter 派生源码只有进入 TideSync 仓库可审查范围，并通过 TideSync 依赖解析进入运行时，才能作为当前对象的完成证据。外部 fork 可以作为上游同步通道或参考来源，不能替代 TideSync PR 完成物。

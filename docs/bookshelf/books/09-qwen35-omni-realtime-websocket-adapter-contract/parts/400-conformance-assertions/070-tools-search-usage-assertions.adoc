@@ -1,0 +1,80 @@
+[#tools-search-usage-assertions.assertion]
+== 工具、搜索与 Usage 断言
+
+本章断言验证 Qwen3.5 的外部能力和计量是否穿透 adapter。
+
+[#tool-schema-sent-in-session-update.assertion, normative=must]
+=== Tool Schema 注入 Session Update
+
+前置状态:: Vision Agents registry 中注册一个工具。
+
+输入事件或动作:: 调用 adapter connect。
+
+期望 adapter 行为:: 将 ToolSchema 映射为 Qwen tools 数组。
+
+期望 core 投影:: 连接事件或测试对象可观察 session_config 中的 tools。
+
+期望 client 事件:: `session.update.session.tools` 包含 function schema。
+
+不符合表现:: registry 有工具但 session.update 无 tools；schema 形状不是 Qwen function schema；发送 unsupported tool_choice 或 parallel_tool_calls。
+
+证据要求:: tools session_config 测试。
+
+覆盖对象:: xref:tool-schema-contract[工具 Schema 映射, rel=verifies]。
+
+[#function-call-executes-and-returns-output.assertion, normative=must]
+=== Function Call 执行并回传结果
+
+前置状态:: adapter 已注册工具 `lookup_order`。
+
+输入事件或动作:: fake server 发送 `response.function_call_arguments.done`，包含 name、arguments 和 call_id。
+
+期望 adapter 行为:: 解析 arguments；调用 registry；发送 function_call_output；发送 response.create；工具状态从 function_call_ready 到 tool_output_sent。
+
+期望 core 投影:: 工具执行错误或成功可通过测试对象、metrics 或事件观察。
+
+期望 client 事件:: 发送 `conversation.item.create` 和 `response.create`。
+
+不符合表现:: 工具事件被当成文本；reader 被工具执行阻塞；只调用工具不回传结果；回传结果后不发送 response.create；call_id 丢失。
+
+证据要求:: function call replay 测试和 fake client send log。
+
+覆盖对象:: xref:tool-call-contract[工具调用执行, rel=verifies]。
+
+[#tool-error-returns-explainable-output.assertion, normative=must]
+=== 工具错误回传可解释结果
+
+前置状态:: fake server 请求一个未注册工具或传入非法 arguments。
+
+输入事件或动作:: 发送 `response.function_call_arguments.done`。
+
+期望 adapter 行为:: 进入工具错误状态；生成可解释工具失败结果；回传 function_call_output 或按错误合同终止 response。
+
+期望 core 投影:: 结构化错误可观察。
+
+期望 client 事件:: 发送 function_call_output 和 response.create；只有在错误合同明确要求终止 response、且对应测试断言覆盖该终止路径时，才允许不发送工具结果。
+
+不符合表现:: 工具调用永久 pending；WebSocket reader 阻塞；错误只打印日志；模型永远等不到工具结果。
+
+证据要求:: tool error replay 测试。
+
+覆盖对象:: xref:tool-error-contract[工具错误, rel=verifies]。
+
+[#search-config-sent-and-usage-retained.assertion, normative=must]
+=== Search 配置发送且 Usage 保留
+
+前置状态:: adapter 配置 enable_search=true，enable_source=true，tools 为空。
+
+输入事件或动作:: connect 后 fake server 返回包含 search usage 的 response.done。
+
+期望 adapter 行为:: session.update 包含 enable_search 和 search_options；response.done usage 中 plugins.search 被保留。
+
+期望 core 投影:: metrics、event metadata、测试对象或符合性证据可读取 search usage。
+
+期望 client 事件:: 发送搜索配置。
+
+不符合表现:: 搜索配置没有发送；usage.plugins.search 被丢弃；搜索 usage 只在日志里；tools 和 search 同时启用。
+
+证据要求:: search config 和 usage replay 测试。
+
+覆盖对象:: xref:search-contract[搜索配置与互斥, rel=verifies]；xref:usage-contract[Usage 保留, rel=verifies]。

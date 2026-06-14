@@ -1,0 +1,35 @@
+[#live-verification-boundary.contract]
+== Live 验证边界
+
+Live 验证边界区分官方文档事实、fake contract 测试和真实服务行为。真实服务验证重要，但不能替代本地 contract 测试。
+
+[#blocked-live-items.contract]
+=== 当前 Live 阻塞项
+
+以下项目需要有效 API key、费用授权、白名单或服务端条件。没有这些条件时，必须登记阻塞，不得伪造通过。
+
+`pcm16` 与 `pcm24` 兼容性:: 官方合同值为 `pcm`。旧 adapter 值是否被 Qwen3.5 服务端接受需要 live 验证。
+
+旧 ASR 模型兼容性:: `gummy-realtime-v1` 是否仍被 Qwen3.5 接受需要 live 验证。合同默认不得依赖该未知。
+
+Cancel 后 stale delta:: `response.cancel` 后是否仍可能收到旧 audio 或 transcript delta 需要 live 验证。adapter 必须防护该竞态。
+
+Semantic VAD 细节:: 背景音、附和声、语义打断和误触发恢复需要 live 或官方补充验证。
+
+WebRTC 工具与搜索:: Qwen 原生 WebRTC 下工具和搜索事件样例需要白名单或官方补充。当前对象是 WebSocket adapter。
+
+声音复刻创建:: 创建音色需要 API key、费用授权和合规音频样本。当前 WebSocket adapter 只接受 voice 字符串。
+
+[#live-does-not-replace-replay.contract, normative=must]
+=== Live 不替代 Replay
+
+真实服务成功不能替代 event replay。Live 服务可能因为网络、服务端策略、模型状态或样例路径未覆盖而没有暴露缺口。Replay 测试必须覆盖正常、打断、错误、迟到、工具、搜索和 usage 路径。
+
+Replay 成功也不能替代 live smoke。Replay 验证本地合同；live smoke 验证官方服务与本地合同的兼容性。两者服务不同证据问题。
+
+[#document-conflict-register.contract, normative=must]
+=== 文档冲突登记
+
+官方英文页、本地抓取文档、SDK示例和上游 adapter 默认值之间出现差异时，PR 必须登记冲突和处理策略。冲突不能被平均化为一个“默认值”。
+
+合同字段优先以官方 Realtime JSON contract 为准；SDK enum、旧模型示例和上游 adapter 默认值只能作为兼容性线索。

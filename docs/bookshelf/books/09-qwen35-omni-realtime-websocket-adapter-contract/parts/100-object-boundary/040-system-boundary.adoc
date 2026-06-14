@@ -1,0 +1,43 @@
+[#system-boundary.boundary]
+== 系统边界
+
+系统边界决定当前对象承担什么，以及哪些相邻对象不进入当前合同。
+
+[#current-websocket-boundary.boundary]
+=== 当前 WebSocket 边界
+
+当前对象承担 Qwen3.5 Omni Realtime WebSocket adapter。WebSocket 边界包括 DashScope WebSocket 建连、session.update、音频 append、图片 append、VAD 或 Manual 控制事件、响应生命周期事件、文本和音频输出事件、工具调用事件、搜索配置与 usage、错误事件和连接恢复。
+
+当前对象不承担 Qwen 原生 WebRTC transport。Qwen WebRTC 的 SDP over HTTP、RTP 音频输入、RTP 视频输入、RTP 音频输出和 DataChannel 控制事件，需要单独的 transport 对象。GetStream WebRTC 负责用户与 Vision Agents 的通话媒体；它不等同于 Qwen 官方 WebRTC。
+
+[#runtime-source-boundary.boundary]
+=== 运行源码边界
+
+当前对象的可修改源码必须在 TideSync 仓库内可审查。受控源码目录名必须表达上游派生身份和 Qwen adapter 责任面；`forks/vision-agents-qwen-native` 是本书用于该身份的规范目录表面。若团队仓库规范要求其他目录名，该目录名必须保留同等身份信息，并满足 xref:controlled-source-contract[受控源码, rel=constrains]和 xref:runtime-import-contract[运行时加载, rel=constrains]的边界：源码不得只存在于 external，不得通过嵌套 git 仓库隐藏 diff，不得依赖开发者本机未提交路径，不得让 TideSync 运行时继续加载 PyPI 旧 adapter。
+
+当前对象可以引用 external 中的上游 Vision Agents clone 作为证据来源。证据来源不是完成物。完成物必须进入 TideSync PR。
+
+[#core-boundary.boundary]
+=== Vision Agents Core 边界
+
+Vision Agents core 是当前对象的运行承载。adapter 应优先使用 core 已有的 `RealtimeAudioOutputDone`、speech started/ended、transcript、interrupt、audio output flush、FunctionRegistry 和 metrics 抽象。
+
+当 Qwen contract 无法由现有 core 抽象表达时，符合实现可以扩展 core，但扩展必须被 xref:core-limitations[Core 限制, rel=depends-on]和目标合同授权，并在 TideSync PR 中说明公共契约、消费者、兼容性和测试证据。adapter 不得为了绕过 core 契约而把可观察状态藏在 provider 私有变量里。
+
+[#neighbor-objects.boundary]
+=== 相邻对象
+
+Qwen 原生 WebRTC adapter 是相邻对象。它有独立 transport、独立媒体路径和独立 live 验证条件。
+
+声音复刻创建 API 是相邻对象。声音复刻通过独立 HTTP API 创建专属音色，返回的音色名可以作为当前 adapter 的 `voice` 参数；创建、查询、删除音色不属于 WebSocket 会话内联 contract。
+
+图片输出和视频输出是相邻或未知对象。控制台模型摘要列出图片和视频输出能力；本地 realtime API 响应章节只定义文本和音频输出 transport。没有官方 realtime 图片或视频输出事件时，当前 WebSocket adapter 不承担图片或视频输出。
+
+长期记忆、多模型切换、数字人形象、前端UI改造和产品营销文案是相邻对象。它们可以参与 TideSync 产品，但不能冒充当前 Qwen WebSocket adapter 的完成条件。
+
+[#unknown-boundary.boundary]
+=== 未知项边界
+
+未知项必须保留未知身份。`pcm16`/`pcm24` 是否被服务端宽容接受、`gummy-realtime-v1` 是否仍被 Qwen3.5 接受、`response.cancel` 后是否仍可能收到旧 delta、semantic VAD 的细粒度误触发边界、WebRTC 工具与搜索样例，都需要官方补充或 live API 验证。
+
+未知项不阻止本书定义 adapter contract。未知项阻止的是把未经确认的兼容行为写成完成事实。

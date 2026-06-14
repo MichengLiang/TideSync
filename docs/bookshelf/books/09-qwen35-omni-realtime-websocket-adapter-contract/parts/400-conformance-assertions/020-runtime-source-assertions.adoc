@@ -1,0 +1,61 @@
+[#runtime-source-assertions.assertion]
+== 运行源码断言
+
+运行源码断言验证 adapter 修改是否进入 TideSync 可审查运行路径。
+
+[#adapter-source-in-tidesync-pr.assertion, normative=must]
+=== Adapter 源码进入 TideSync PR
+
+前置状态:: 开发者提交 Qwen adapter 实现 PR。
+
+输入事件或动作:: 审查 PR diff。
+
+期望 adapter 行为:: PR diff 包含 TideSync 仓库内受控 adapter 派生源码、依赖解析修改、测试和来源说明。
+
+期望 core 投影:: 不适用。
+
+期望 client 事件:: 不适用。
+
+不符合表现:: 修改只存在于 external；修改只存在于 site-packages；修改只存在于个人 fork；PR 只改文档或 TideSync 外层配置；PR 使用 submodule 或嵌套 git 隐藏主要 diff。
+
+证据要求:: PR 文件列表、UPSTREAM 来源说明、依赖解析文件和测试文件。
+
+覆盖对象:: xref:controlled-source-contract[受控源码, rel=verifies]。
+
+[#runtime-imports-controlled-adapter.assertion, normative=must]
+=== 运行时加载受控 Adapter
+
+前置状态:: TideSync 测试环境安装完成。
+
+输入事件或动作:: 运行 import 路径断言测试。
+
+期望 adapter 行为:: `vision_agents.plugins.qwen` 或等价 Qwen provider 模块的 `__file__` 路径位于 TideSync 受控源码目录。
+
+期望 core 投影:: 不适用。
+
+期望 client 事件:: 不适用。
+
+不符合表现:: 模块路径位于 `.venv/site-packages` 的上游包；模块路径位于 external；测试依赖未提交 `PYTHONPATH`；CI 与本地解析路径不一致。
+
+证据要求:: 自动测试输出或命令输出，并记录解析路径。
+
+覆盖对象:: xref:runtime-import-contract[运行时加载, rel=verifies]。
+
+[#dependency-resolution-reproducible.assertion, normative=must]
+=== 依赖解析可复现
+
+前置状态:: 新环境或 CI 环境从 TideSync 仓库安装依赖。
+
+输入事件或动作:: 执行项目规定的安装和测试命令。
+
+期望 adapter 行为:: 安装后 import 路径与受控源码一致；锁文件或 workspace 配置能复现该解析。
+
+期望 core 投影:: 不适用。
+
+期望 client 事件:: 不适用。
+
+不符合表现:: 只有开发者本机可运行；需要手动复制文件到 `.venv`；锁文件未更新；CI 加载旧上游包。
+
+证据要求:: 安装命令、锁文件 diff、import 路径测试和 CI 输出。
+
+覆盖对象:: xref:dependency-contract[依赖解析, rel=verifies]。

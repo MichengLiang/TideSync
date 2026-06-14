@@ -1,0 +1,59 @@
+[#qwen-websocket-adapter-artifact.concept]
+== Qwen WebSocket Adapter 人工制品
+
+TideSync 的 Qwen WebSocket Adapter 人工制品，是 TideSync 仓库内受控的 Vision Agents Qwen3.5 Omni Realtime WebSocket adapter 派生源码对象，以及使该源码对象进入 TideSync 运行时的依赖解析、配置表面、事件映射、状态机、错误处理、测试证据和 PR 符合性声明。
+
+这个对象不是 Qwen3.5 Omni Realtime 模型本身。模型提供实时音频、图像、文本、语音、VAD、工具、搜索和 usage 等能力；adapter 的职责是把这些能力对应的 WebSocket contract 接入 Vision Agents 和 TideSync 的运行系统。
+
+这个对象不是 TideSync 外层 `create_agent()` 配置。外层配置可以选择模型、地域、音色、帧率和能力开关；它不能替代 provider 层对 Qwen 服务端事件、输入轮次、响应状态、本地音频 flush、工具调用、搜索 usage 和错误恢复的处理。
+
+这个对象不是 external 目录中的参考仓库。external 是证据来源和上游源码参考区；可修改源码必须进入 TideSync 仓库的可审查范围，才能成为 TideSync PR 的完成物。
+
+这个对象不是 Qwen 原生 WebRTC transport。当前对象使用 Qwen WebSocket API。Qwen 原生 WebRTC 的 SDP、RTP 音频轨道、RTP 视频轨道和 DataChannel 是相邻 transport，不能冒充当前 WebSocket adapter 的完成条件。
+
+[#native-support-definition.contract, normative=must]
+=== 原生支持定义
+
+Vision Agents 在 TideSync 当前边界内对 Qwen3.5 Omni Realtime WebSocket 的原生一等公民支持，指 TideSync 运行时加载的 Qwen adapter 源码对象完整承担 Qwen3.5 Omni Realtime WebSocket 的配置、输入、输出、状态、打断、工具、搜索、usage 和错误合同，并通过本书定义的测试和 PR 证据验收。
+
+原生支持不等于能连接模型。连接只证明 WebSocket、鉴权和 `session.update` 起点存在。原生支持也不等于模型官方具备某项能力。模型能力只有穿透 adapter、Vision Agents core 和 TideSync 运行路径，成为可配置、可观察、可测试的行为时，才进入本书的符合性判断。
+
+[#adapter-constitutive-conditions.concept]
+=== 构成性条件
+
+Qwen WebSocket Adapter 人工制品的构成性条件包括八项。缺少任一条件，当前对象不能被判定为符合本书定义的原生支持。
+
+第一，源码必须在 TideSync 仓库内可审查。所有修改必须出现在 TideSync PR diff 中。external、site-packages、本机 editable clone、个人远程 fork 或未纳入 PR 的源码，不能作为完成证据。
+
+第二，TideSync 运行时必须加载 TideSync 仓库内的 adapter 源码。代码存在但运行时仍从 PyPI 上游包加载 Qwen adapter 时，当前对象没有进入系统。
+
+第三，adapter 配置必须以 Qwen3.5 Omni Realtime WebSocket contract 为来源。模型名、连接地址、输出模态、音色、音频格式、输入转写、VAD 类型、搜索、工具和互斥规则必须有官方合同、TideSync配置表面和测试证据。
+
+第四，adapter 必须完整表达当前 WebSocket contract 的输入、输出和响应生命周期。音频输入、图片输入、VAD 事件、响应创建、文本输出、音频输出、转写完成、响应完成、工具调用、搜索 usage 和错误事件必须进入状态机或被明确归档为非当前承诺。
+
+第五，adapter 必须把 Qwen 服务端事件投射到 Vision Agents core 的公共承载物。用户 speech started/ended、agent speech started/ended、audio output done、interrupted audio done、transcript delta/final 和 error 不能停留在 Qwen adapter 私有变量或日志中。
+
+第六，adapter 必须定义本轮输入和当前响应的状态。全局布尔值不能替代当前输入轮次、图片发送许可、response id、cancelled response、tool call、search usage 和错误恢复状态。
+
+第七，adapter 必须提供可重复测试投影。事件 replay、fake WebSocket、配置测试、状态机测试、工具与搜索测试、错误注入测试和 TideSync import 路径测试是主要证据。单次真实通话演示只能作为辅助证据。
+
+第八，adapter 必须公开未知项和偏离项。文档冲突、live API 未验证、服务端兼容性未知和非当前 transport 能力必须归档，不能伪装成已经完成的合同。
+
+[#book-role.contract]
+=== 本书的判定角色
+
+本书把 Qwen WebSocket Adapter 人工制品从愿望、路线和实现物中分离出来。开发者、测试工程师、项目负责人和维护者可以使用日常项目语言沟通，但正式完成判断必须回到本书定义的对象、合同、断言、证据和偏离声明。
+
+当一个实现声称 Vision Agents 已经原生支持 Qwen3.5 Omni Realtime WebSocket 时，本书要求它回答五个问题。
+
+第一，源码是否进入 TideSync 仓库并出现在 PR diff 中。
+
+第二，运行时是否加载这份源码，而不是加载 PyPI、external 或本机未提交路径。
+
+第三，adapter 是否覆盖本书定义的 Qwen WebSocket 配置、事件、状态和错误合同。
+
+第四，测试证据是否逐条覆盖本书的核心断言。
+
+第五，未知项、文档冲突、live 验证阻塞和非当前承诺是否公开登记。
+
+这五个问题共同构成本书的符合性判定入口。

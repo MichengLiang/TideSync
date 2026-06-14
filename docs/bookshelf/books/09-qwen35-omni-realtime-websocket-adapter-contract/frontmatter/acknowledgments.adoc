@@ -1,0 +1,1 @@
+本书以 TideSync 08 号体验规约、本地 Qwen3.5 Omni Realtime 文档、Vision Agents v0.6.4 源码审计和前置 deep-research 报告为证据基础。

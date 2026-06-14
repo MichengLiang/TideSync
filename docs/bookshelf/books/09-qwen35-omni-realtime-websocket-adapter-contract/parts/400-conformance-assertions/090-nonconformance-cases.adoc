@@ -1,0 +1,56 @@
+[#nonconformance-cases.nonconformance]
+== 不符合案例
+
+不符合案例把常见假成功写成可判定失败。它们不替代断言；它们帮助评审者识别偷换。
+
+[#external-only-nonconformance.nonconformance]
+=== 只改 External
+
+实现只在 `external/Vision-Agents`、个人 fork 或 site-packages 中修改 Qwen adapter。TideSync PR 中看不到源码 diff，运行时 import 路径也不指向 TideSync 受控源码。
+
+该实现违反 xref:adapter-source-in-tidesync-pr[Adapter 源码进入 TideSync PR, rel=violates] 和 xref:runtime-imports-controlled-adapter[运行时加载受控 Adapter, rel=violates]。
+
+[#cancel-only-nonconformance.nonconformance]
+=== 只发送 Response Cancel
+
+实现收到 `input_audio_buffer.speech_started` 后只发送 `response.cancel`，没有发 interrupted audio done，没有触发本地 flush，没有隔离旧 response delta，也没有投射 user turn。
+
+该实现不符合打断契约。用户仍可能听到旧回答继续播放。
+
+该实现违反 xref:speech-started-interrupts-current-response[Speech Started 中断当前响应, rel=violates]。
+
+[#audio-delta-only-nonconformance.nonconformance]
+=== 只处理 Audio Delta
+
+实现处理 `response.audio.delta` 并播放声音，但不处理 `response.audio.done`、`response.audio_transcript.done` 和 `response.done.usage`。
+
+该实现只能证明音频流可播放，不能证明 response lifecycle、audio completion、transcript final 或 usage 成立。
+
+该实现违反 xref:audio-delta-and-done-map-to-output[Audio Delta 与 Done 映射音频输出, rel=violates] 和 xref:transcript-delta-and-done-map-to-final[Transcript Delta 与 Done 映射转写边界, rel=violates]。
+
+[#image-once-flag-nonconformance.nonconformance]
+=== 用 Once Flag 管理图片
+
+实现继续用“曾经发送过音频”的全局布尔值决定是否发送图片。track 重连、speech stopped、commit、clear 或图片时序错误后，adapter 仍可能把图片发送到非法轮次。
+
+该实现不符合视频帧状态模型。
+
+该实现违反 xref:image-not-sent-before-turn-audio[当前轮音频前不发送图片, rel=violates]、xref:image-window-closes-after-speech-stopped[Speech Stopped 后关闭本轮图片窗口, rel=violates] 和 xref:track-reconnect-waits-for-current-audio[Track 重连等待当前轮音频, rel=violates]。
+
+[#demo-only-nonconformance.nonconformance]
+=== 只有真实通话演示
+
+实现提供一次真实通话录屏，展示能听、能看、能回答，但没有 fake WebSocket、event replay、状态机、import 路径和错误注入测试。
+
+该实现不能证明 adapter contract 成立。真实通话录屏只能补充用户体验观察，不能替代可重复证据。
+
+该实现违反 xref:event-replay-tests[Event Replay 测试, rel=violates]、xref:fake-websocket-tests[Fake WebSocket 测试, rel=violates] 和 xref:runtime-path-tests[运行路径测试, rel=violates]。
+
+[#model-capability-nonconformance.nonconformance]
+=== 用模型能力替代 Adapter 证据
+
+实现引用 Qwen 官方文档说明模型支持 semantic VAD、工具调用或搜索，但 adapter 没有配置字段、事件处理、状态投影和测试。
+
+该实现把模型能力冒充 adapter 能力，不符合原生支持定义。
+
+该实现违反 xref:native-support-definition[原生支持定义, rel=violates]。

@@ -1,0 +1,1 @@
+本部分记录当前系统事实。事实图回答当前 TideSync 如何加载 Qwen adapter、Qwen 官方 WebSocket contract 包含什么、上游 Vision Agents Qwen adapter 覆盖了什么、Vision Agents core 已经能承载什么、缺口如何从事实对比中产生。
