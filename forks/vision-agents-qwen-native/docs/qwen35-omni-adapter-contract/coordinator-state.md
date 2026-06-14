@@ -108,7 +108,7 @@ Batch 03, review accepted:
   - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
-Batch 04, ready for dispatch:
+Batch 04, review accepted:
 
 - Name: `batch-04-interruption-local-flush-stale-response-cancel-error`
 - Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-04-interruption-local-flush-stale-response-cancel-error.md`
@@ -119,7 +119,17 @@ Batch 04, ready for dispatch:
 - Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-04-interruption-local-flush-stale-response-cancel-error.md`
 - Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-04-builder-dispatch-prompt.md`
 - Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-04-reviewer-dispatch-prompt.md`
-- Required implementation scope: interruption path, local audio flush, stale response isolation, cancel error behavior. Batch 04 excludes tool execution, full structured error/reconnect closure, and final conformance closure.
+- Implementation commit: `830f914 feat: implement Qwen interruption state handling`
+- Review-fix commit: `105ee3f fix: unblock Qwen post-response interruption path`
+- Reviewed final HEAD: `4b01c38b49fe0ffa52ca88e674581b3582ef67ad`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-04-interruption-local-flush-stale-response-cancel-error-review.md`
+- Promotion decision: Batch 04 may be promoted. Non-blocking note is that live interruption latency remains unmeasured because live Qwen verification lacks explicit API key, cost authorization, and service availability.
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
 Future batches, not yet dispatched:
 
