@@ -131,7 +131,7 @@ Batch 04, review accepted:
   - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
-Batch 06, ready for dispatch:
+Batch 06, review accepted:
 
 - Name: `batch-06-structured-errors-reconnect-conformance`
 - Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-06-structured-errors-reconnect-conformance.md`
@@ -143,7 +143,17 @@ Batch 06, ready for dispatch:
 - Expected final conformance statement: `docs/qwen35-omni-adapter-contract/final-conformance-statement.md`
 - Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-06-builder-dispatch-prompt.md`
 - Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-06-reviewer-dispatch-prompt.md`
-- Required implementation scope: structured Qwen error fields, session config failure state, recoverable reconnect state reset, usage parse evidence closure, and final conformance statement. Batch 06 excludes unrelated product behavior and live verification unless credentials, cost authorization, and service availability are explicit.
+- Implementation commit: `3b26850 feat: close Qwen error and reconnect conformance`
+- Reviewed final HEAD: `3e15f20bf04a39e32fe5c82e42d972b684629f67`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-06-structured-errors-reconnect-conformance-review.md`
+- Final conformance statement: `docs/qwen35-omni-adapter-contract/final-conformance-statement.md`
+- Promotion decision: Batch 06 may be promoted. Non-blocking notes are that classification evidence is not one replay per error state and terminal connection behavior is represented but not live-proven; final conformance records live smoke, interruption latency, live reconnect timing, and undocumented payload variants as blocked or unknown.
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
 Batch 05, review accepted:
 
