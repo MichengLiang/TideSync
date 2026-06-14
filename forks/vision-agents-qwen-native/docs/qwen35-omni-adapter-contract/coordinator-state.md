@@ -131,10 +131,31 @@ Batch 04, review accepted:
   - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
-Future batches, not yet dispatched:
+Future batches, not yet dispatched after Batch 05:
 
-- Batch 05: tools execution, search usage, and structured tool errors.
 - Batch 06: structured Qwen errors, reconnect state reset, evidence closure, and full PR conformance statement.
+
+Batch 05, review accepted:
+
+- Name: `batch-05-tools-search-tool-errors`
+- Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-05-tools-search-tool-errors.md`
+- Review package: `docs/qwen35-omni-adapter-contract/review-packages/batch-05-tools-search-tool-errors-spec-review.md`
+- Owner role: persistent builder subagent.
+- Expected branch: `feature/qwen35-tools-search-tool-errors`
+- Expected report: `docs/qwen35-omni-adapter-contract/reports/batch-05-tools-search-tool-errors.md`
+- Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-05-tools-search-tool-errors.md`
+- Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-05-builder-dispatch-prompt.md`
+- Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-05-reviewer-dispatch-prompt.md`
+- Implementation commit: `9e97bcf feat: execute Qwen function calls through registry`
+- Reviewed final HEAD: `c994f473bfc6021afad39f1d0b6cf26b56f1f851`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-05-tools-search-tool-errors-review.md`
+- Promotion decision: Batch 05 may be promoted. Non-blocking notes are that tool state projection is latest-call oriented rather than a full per-call history, and broader live Qwen function-call payload variants remain unverified without live service access.
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
 ## Role Registry
 
@@ -192,13 +213,28 @@ Batch 04 authoritative sections:
 - Core carriers for local flush: `parts/200-current-system/040-vision-agents-core-carriers.adoc:6-27`
 - Test evidence: `parts/500-evidence-governance/010-test-evidence-contract.adoc:13-34`
 
+Batch 05 authoritative sections:
+
+- Tools/search/usage contract: `parts/300-target-contract/070-tools-search-usage-contract.adoc:1-41`
+- Function-call server events: `parts/300-target-contract/040-server-event-contract.adoc:49-64`
+- Tool/search/usage state: `parts/300-target-contract/050-state-model.adoc:64-73`
+- Tool error contract: `parts/300-target-contract/080-error-contract.adoc:27-32`
+- Tools/search/usage assertions: `parts/400-conformance-assertions/070-tools-search-usage-assertions.adoc:1-80`
+- Coverage map: `parts/400-conformance-assertions/100-coverage-map.adoc:34-40`
+- Function registry carrier: `parts/200-current-system/040-vision-agents-core-carriers.adoc:29-36`
+- Test evidence: `parts/500-evidence-governance/010-test-evidence-contract.adoc:13-34`
+
 Current baseline facts:
 
 - `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` maps Qwen response lifecycle, audio done, transcript done, and usage state after Batch 03.
-- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` still has a narrow `_on_interruption()` path that sends `response.cancel` and clears private current-response fields without local flush or stale response isolation.
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` implements Batch 04 interruption, local flush, stale response isolation, and cancel-error projection.
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` still lacks Qwen `response.function_call_arguments.delta/done` execution through the Vision Agents registry.
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` converts constructor-supplied tools to Qwen function schema, but registry tools are not yet included in session config at the Batch 05 starting point.
 - `plugins/qwen/vision_agents/plugins/qwen/client.py` has the `response.cancel` sender needed by Batch 04.
+- `plugins/qwen/vision_agents/plugins/qwen/client.py` has `conversation.item.create(function_call_output)` and `response.create` senders needed by Batch 05.
 - `agents-core/vision_agents/core/llm/realtime.py` already exposes `RealtimeAudioOutputDone(interrupted=True)` and `RealtimeAgentSpeechEnded(interrupted=True)`.
 - `agents-core/vision_agents/core/agents/inference/realtime_flow.py` already turns interrupted audio done into local `interrupt()` and downstream audio flush.
+- `agents-core/vision_agents/core/llm/llm.py` owns `function_registry`, `get_available_functions()`, and `call_function(name, arguments)` for Batch 05 tool execution.
 
 ## Open Blockers
 
