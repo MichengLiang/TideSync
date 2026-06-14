@@ -10,6 +10,7 @@ This PR implements Batch 03 of the Qwen3.5 Omni Realtime WebSocket adapter contr
 - Stops treating `response.done` as an empty assistant transcript final.
 - Parses and retains `response.done.usage`, including raw usage and `plugins.search`.
 - Adds replay tests for Batch 03 assertions and preserves existing skipped live tests.
+- Records independent review and coordinator promotion evidence for final reviewed HEAD `223cc13`.
 
 ## Repository Rationale
 
@@ -36,6 +37,9 @@ Projection boundary: `RealtimeAudioOutput`, `RealtimeAudioOutputDone`, and agent
   - `All checks passed!`
 - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `2 files already formatted`
+- Independent review:
+  - Result: `APPROVED_WITH_NOTES`.
+  - Report: `forks/vision-agents-qwen-native/docs/qwen35-omni-adapter-contract/reports/batch-03-server-event-mapping-speech-audio-transcript-usage-review.md`.
 
 The pytest commands emit the existing narrow-test coverage warnings that `tidesync` was not imported and no coverage data was collected.
 

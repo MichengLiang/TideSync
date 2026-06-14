@@ -84,7 +84,7 @@ Batch 02, review accepted:
   - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
-Batch 03, next dispatch:
+Batch 03, review accepted:
 
 - Name: `batch-03-server-event-mapping-speech-audio-transcript-usage`
 - Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-03-server-event-mapping-speech-audio-transcript-usage.md`
@@ -95,10 +95,26 @@ Batch 03, next dispatch:
 - Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-03-server-event-mapping-speech-audio-transcript-usage.md`
 - Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-03-builder-dispatch-prompt.md`
 - Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-03-reviewer-dispatch-prompt.md`
+- Implementation commit: `2f5896d feat: map Qwen audio transcript and usage events`
+- Reviewed final HEAD: `223cc1304ddb6201a46908d1886f7fbf24aefb92`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-03-server-event-mapping-speech-audio-transcript-usage-review.md`
+- Promotion decision: Batch 03 may be promoted. Non-blocking notes are that usage/search projection remains adapter-private for this batch, and `response.done` without `response.audio.done` closes response state but does not emit agent speech ended.
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+
+Batch 04, next dispatch:
+
+- Name: `batch-04-interruption-local-flush-stale-response-cancel-error`
+- Owner role: persistent builder subagent after Batch 03 promotion is closed.
+- Expected branch: to be assigned in a Batch 04 handoff.
+- Required coordinator work before dispatch: create Batch 04 handoff and review package from the interruption contract, response state, local audio state, transcript interruption boundary, error contract, and interruption assertions.
 
 Future batches, not yet dispatched:
 
-- Batch 04: interruption path, local flush, stale response isolation, and cancel error behavior.
 - Batch 05: tools execution, search usage, and structured tool errors.
 - Batch 06: structured Qwen errors, reconnect state reset, evidence closure, and full PR conformance statement.
 
