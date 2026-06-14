@@ -837,6 +837,47 @@ async def test_stale_audio_and_transcript_deltas_after_interrupt_are_blocked(
 
 
 @pytest.mark.contract
+async def test_speech_started_interrupts_after_response_done_when_local_audio_remains_risky(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "post done stale risk"
+    participant = fake_participant()
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm(), participant=participant)
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "response.created", "response": {"id": "resp_1"}},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta()},
+            {"type": "response.audio.done", "response_id": "resp_1"},
+            {"type": "response.done", "response": {"id": "resp_1"}},
+            {"type": "input_audio_buffer.speech_started"},
+            {"type": "response.audio.delta", "response_id": "resp_1", "delta": qwen_audio_delta(b"\x05\x00")},
+        ]
+    )
+
+    await rt._process_events()
+
+    events = rt.output.peek()
+    audio_events = [event for event in events if isinstance(event, RealtimeAudioOutput)]
+    interrupted_audio = [event for event in events if isinstance(event, RealtimeAudioOutputDone) and event.interrupted]
+    assert [event.response_id for event in audio_events] == ["resp_1"]
+    assert len(interrupted_audio) == 1
+    assert interrupted_audio[0].response_id == "resp_1"
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+        "response.cancel",
+    ]
+    assert rt._qwen_response_snapshot()["response"] == "interrupted"
+    assert rt._qwen_response_snapshot()["audio_output"] == "stale_audio_blocked"
+    assert rt._qwen_interruption_snapshot()["interrupted_response_ids"] == ["resp_1"]
+    assert rt._qwen_interruption_snapshot()["stale_audio_blocked"] == 1
+
+
+@pytest.mark.contract
 async def test_follow_up_response_after_interrupt_is_not_treated_as_stale(
     fake_qwen_client: type[FakeQwenClient],
 ) -> None:

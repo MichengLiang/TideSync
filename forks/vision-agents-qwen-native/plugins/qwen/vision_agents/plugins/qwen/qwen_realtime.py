@@ -567,8 +567,7 @@ class Qwen3Realtime(Realtime):
             elif event_type == "input_audio_buffer.speech_started":
                 self._input_turn_state.mark_speech_started()
                 self._emit_user_speech_started()
-                if self._is_responding:
-                    await self._on_interruption()
+                await self._on_interruption()
             elif event_type == "input_audio_buffer.speech_stopped":
                 self._input_turn_state.close_for_speech_stopped()
                 self._emit_user_speech_ended()
