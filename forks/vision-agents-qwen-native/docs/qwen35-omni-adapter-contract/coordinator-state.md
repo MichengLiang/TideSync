@@ -65,9 +65,14 @@ Batch 01, review accepted:
 Batch 02, next dispatch:
 
 - Name: `batch-02-input-turn-and-video-send-permission-state`
-- Owner role: persistent builder subagent after Batch 01 promotion is closed.
-- Expected branch: to be assigned in a Batch 02 handoff.
-- Required coordinator work before dispatch: create Batch 02 handoff and review package from the input-turn, image append, video-frame state, event replay, and test evidence sections.
+- Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-02-input-turn-and-video-send-permission-state.md`
+- Review package: `docs/qwen35-omni-adapter-contract/review-packages/batch-02-input-turn-and-video-send-permission-state-spec-review.md`
+- Owner role: persistent builder subagent.
+- Expected branch: `feature/qwen35-input-turn-video-state`
+- Expected report: `docs/qwen35-omni-adapter-contract/reports/batch-02-input-turn-and-video-send-permission-state.md`
+- Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-02-input-turn-and-video-send-permission-state.md`
+- Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-02-builder-dispatch-prompt.md`
+- Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-02-reviewer-dispatch-prompt.md`
 
 Future batches, not yet dispatched:
 
