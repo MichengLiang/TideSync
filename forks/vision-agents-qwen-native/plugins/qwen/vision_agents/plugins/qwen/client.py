@@ -4,7 +4,8 @@ import contextlib
 import json
 import logging
 import time
-from typing import Any, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 import websockets
 from getstream.video.rtc import PcmData
@@ -28,7 +29,7 @@ class Qwen3RealtimeClient:
     ) -> None:
         self._base_url = f"{base_url}?model={model}"
         self._api_key = api_key
-        self._real_ws: Optional[websockets.ClientConnection] = None
+        self._real_ws: websockets.ClientConnection | None = None
         self._exit_stack = contextlib.AsyncExitStack()
         self._config = config
         self._conn_lock = asyncio.Lock()
@@ -78,9 +79,7 @@ class Qwen3RealtimeClient:
         except websockets.ConnectionClosedError as e:
             if not _should_reconnect(e):
                 raise
-            logger.warning(
-                f"Re-establishing Qwen3Realtime connection due to error: {e}"
-            )
+            logger.warning(f"Re-establishing Qwen3Realtime connection due to error: {e}")
             await asyncio.sleep(self._reconnect_backoff)
             await self.connect()
 
@@ -91,9 +90,7 @@ class Qwen3RealtimeClient:
     async def send_audio(self, pcm: PcmData) -> None:
         """Stream raw audio data to the API."""
         # Only 16-bit, 16 kHz, mono PCM is supported.
-        audio_bytes = pcm.resample(
-            target_sample_rate=16000, target_channels=1
-        ).samples.tobytes()
+        audio_bytes = pcm.resample(target_sample_rate=16000, target_channels=1).samples.tobytes()
         audio_b64 = base64.b64encode(audio_bytes).decode()
         append_event = {"type": "input_audio_buffer.append", "audio": audio_b64}
         await self.send_event(append_event)
@@ -101,6 +98,11 @@ class Qwen3RealtimeClient:
     async def commit_audio(self) -> None:
         """Commit the audio buffer to trigger processing."""
         event = {"type": "input_audio_buffer.commit"}
+        await self.send_event(event)
+
+    async def clear_audio(self) -> None:
+        """Clear the current audio buffer."""
+        event = {"type": "input_audio_buffer.clear"}
         await self.send_event(event)
 
     async def send_frame(self, frame_bytes: bytes) -> None:
@@ -124,6 +126,23 @@ class Qwen3RealtimeClient:
         event = {"type": "response.cancel"}
         await self.send_event(event)
 
+    async def send_function_call_output(self, *, call_id: str, output: str) -> None:
+        """Send a function call result back to Qwen."""
+        event = {
+            "type": "conversation.item.create",
+            "item": {
+                "type": "function_call_output",
+                "call_id": call_id,
+                "output": output,
+            },
+        }
+        await self.send_event(event)
+
+    async def create_response(self) -> None:
+        """Trigger Qwen to create a response."""
+        event = {"type": "response.create"}
+        await self.send_event(event)
+
     @property
     def _ws(self) -> websockets.ClientConnection:
         if self._real_ws is None:
@@ -142,10 +161,6 @@ def _should_reconnect(exc: Exception) -> bool:
         1013,  # Try again later
         1014,  # Bad gateway
     ]
-    if (
-        isinstance(exc, websockets.ConnectionClosedError)
-        and exc.rcvd
-        and exc.rcvd.code in reconnect_close_codes
-    ):
+    if isinstance(exc, websockets.ConnectionClosedError) and exc.rcvd and exc.rcvd.code in reconnect_close_codes:
         return True
     return False

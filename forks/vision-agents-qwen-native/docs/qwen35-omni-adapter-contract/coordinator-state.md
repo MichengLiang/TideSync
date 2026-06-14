@@ -11,7 +11,19 @@ The controlled source baseline has already landed on `main`:
 - Current branch before batch dispatch: `main`
 - Worktree status before batch dispatch: clean in TideSync and clean in `forks/vision-agents-qwen-native`
 
-This means batch 01 does not repeat controlled-source import work. Batch 01 starts from the controlled runtime source and implements the next contract slice: session configuration and client event senders.
+This means batch 01 did not repeat controlled-source import work. Batch 01 started from the controlled runtime source and implemented the next contract slice: session configuration and client event senders.
+
+Batch 01 review status:
+
+- Branch: `feature/qwen35-session-config-contract`
+- Implementation commit: `c64b067 feat: implement Qwen session config contract slice`
+- Evidence-fix commit: `c183713 fix: address Batch 01 review evidence gaps`
+- Reviewed final HEAD: `c183713df471e074f0adcf26a87eef0ed9535e73`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders-review.md`
+- Builder report: `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders.md`
+- PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-01-session-config-and-client-senders.md`
+- Promotion decision: Batch 01 may be promoted. The non-blocking review note is that the builder report names `c64b067` as the implementation commit while the reviewed final HEAD is `c183713`.
 
 ## Promotion Boundary
 
@@ -33,7 +45,7 @@ Batch 00, accepted baseline:
 - Runtime import path test exists at `tests/test_vision_agents_runtime_path.py`.
 - Upstream provenance exists at `forks/vision-agents-qwen-native/UPSTREAM.adoc`.
 
-Batch 01, next dispatch:
+Batch 01, review accepted:
 
 - Name: `batch-01-session-config-and-client-senders`
 - Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-01-session-config-and-client-senders.md`
@@ -42,10 +54,23 @@ Batch 01, next dispatch:
 - Expected branch: `feature/qwen35-session-config-contract`
 - Expected report: `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders.md`
 - Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-01-session-config-and-client-senders.md`
+- Final reviewed HEAD: `c183713df471e074f0adcf26a87eef0ed9535e73`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders-review.md`
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+
+Batch 02, next dispatch:
+
+- Name: `batch-02-input-turn-and-video-send-permission-state`
+- Owner role: persistent builder subagent after Batch 01 promotion is closed.
+- Expected branch: to be assigned in a Batch 02 handoff.
+- Required coordinator work before dispatch: create Batch 02 handoff and review package from the input-turn, image append, video-frame state, event replay, and test evidence sections.
 
 Future batches, not yet dispatched:
 
-- Batch 02: input turn and video send-permission state.
 - Batch 03: server event mapping for speech, audio done, transcript done, and usage.
 - Batch 04: interruption path, local flush, stale response isolation, and cancel error behavior.
 - Batch 05: tools execution, search usage, and structured tool errors.
