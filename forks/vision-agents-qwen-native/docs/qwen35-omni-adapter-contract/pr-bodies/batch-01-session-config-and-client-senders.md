@@ -24,6 +24,10 @@ Review fix: the report and PR body draft now live under the fork work-area evide
   - Leaves existing live integration tests skipped.
 - `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders.md`
   - Records batch evidence, assertion results, known unknowns, and non-goals.
+- `docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders-review.md`
+  - Records the independent review result for final reviewed HEAD `c183713`.
+- `docs/qwen35-omni-adapter-contract/coordinator-state.md`
+  - Records the coordinator promotion decision and next batch boundary.
 
 ## Repository Rationale
 
@@ -53,6 +57,9 @@ This PR belongs in the controlled fork because the 09 contract requires Qwen ada
   - Result: `All checks passed!`
 - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/client.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - Result: `3 files already formatted`.
+- Independent review:
+  - Result: `APPROVED_WITH_NOTES`.
+  - Report: `forks/vision-agents-qwen-native/docs/qwen35-omni-adapter-contract/reports/batch-01-session-config-and-client-senders-review.md`.
 
 ## Live Verification / Blockers
 
