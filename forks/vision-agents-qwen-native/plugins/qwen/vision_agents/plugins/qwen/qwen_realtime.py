@@ -50,6 +50,41 @@ class VideoPermissionState(StrEnum):
     SUSPENDED_AFTER_IMAGE_TIMING_ERROR = "suspended_after_image_timing_error"
 
 
+class ResponseState(StrEnum):
+    NO_RESPONSE = "no_response"
+    RESPONSE_CREATED = "response_created"
+    OUTPUT_ITEM_OPEN = "output_item_open"
+    CONTENT_PART_OPEN = "content_part_open"
+    COMPLETED = "completed"
+
+
+class LocalAudioOutputState(StrEnum):
+    NO_AUDIO_OUTPUT = "no_audio_output"
+    AUDIO_OUTPUT_STREAMING = "audio_output_streaming"
+    AUDIO_DONE_RECEIVED = "audio_done_received"
+    AUDIO_OUTPUT_DONE_EMITTED = "audio_output_done_emitted"
+
+
+class TranscriptState(StrEnum):
+    USER_TRANSCRIPT_EMPTY = "user_transcript_empty"
+    USER_TRANSCRIPT_DELTA = "user_transcript_delta"
+    USER_TRANSCRIPT_FINAL = "user_transcript_final"
+    AGENT_TRANSCRIPT_EMPTY = "agent_transcript_empty"
+    AGENT_TRANSCRIPT_DELTA = "agent_transcript_delta"
+    AGENT_TRANSCRIPT_FINAL = "agent_transcript_final"
+
+
+class UsageState(StrEnum):
+    USAGE_ABSENT = "usage_absent"
+    USAGE_PARSED = "usage_parsed"
+    USAGE_PARSE_FAILED = "usage_parse_failed"
+
+
+class SearchUsageState(StrEnum):
+    SEARCH_USAGE_MISSING = "search_usage_missing"
+    SEARCH_USAGE_SEEN = "search_usage_seen"
+
+
 @dataclass(slots=True)
 class QwenInputTurnState:
     input_audio: InputAudioState = InputAudioState.TURN_EMPTY
@@ -90,6 +125,77 @@ class QwenInputTurnState:
 
     def snapshot(self) -> dict[str, str]:
         return {"input_audio": self.input_audio.value, "video": self.video.value}
+
+
+@dataclass(slots=True)
+class QwenUsageSnapshot:
+    response_id: str | None = None
+    raw_usage: Any | None = None
+    total_tokens: int | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    input_token_details: dict[str, Any] | None = None
+    output_token_details: dict[str, Any] | None = None
+    search_usage: dict[str, Any] | None = None
+    parse_error: str | None = None
+
+    def snapshot(self) -> dict[str, Any]:
+        return {
+            "response_id": self.response_id,
+            "raw_usage": self.raw_usage,
+            "total_tokens": self.total_tokens,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "input_token_details": self.input_token_details,
+            "output_token_details": self.output_token_details,
+            "search_usage": self.search_usage,
+            "parse_error": self.parse_error,
+        }
+
+
+@dataclass(slots=True)
+class QwenResponseProjection:
+    response: ResponseState = ResponseState.NO_RESPONSE
+    audio_output: LocalAudioOutputState = LocalAudioOutputState.NO_AUDIO_OUTPUT
+    user_transcript: TranscriptState = TranscriptState.USER_TRANSCRIPT_EMPTY
+    agent_transcript: TranscriptState = TranscriptState.AGENT_TRANSCRIPT_EMPTY
+    usage: UsageState = UsageState.USAGE_ABSENT
+    search: SearchUsageState = SearchUsageState.SEARCH_USAGE_MISSING
+    response_id: str | None = None
+    item_id: str | None = None
+    conversation_item_id: str | None = None
+    content_part_type: str | None = None
+    agent_speech_started: bool = False
+    agent_transcript_text: str = ""
+    usage_snapshot: QwenUsageSnapshot | None = None
+
+    def begin_response(self, response_id: str | None) -> None:
+        self.response = ResponseState.RESPONSE_CREATED
+        self.audio_output = LocalAudioOutputState.NO_AUDIO_OUTPUT
+        self.agent_transcript = TranscriptState.AGENT_TRANSCRIPT_EMPTY
+        self.usage = UsageState.USAGE_ABSENT
+        self.search = SearchUsageState.SEARCH_USAGE_MISSING
+        self.response_id = response_id
+        self.item_id = None
+        self.conversation_item_id = None
+        self.content_part_type = None
+        self.agent_speech_started = False
+        self.agent_transcript_text = ""
+        self.usage_snapshot = None
+
+    def snapshot(self) -> dict[str, str | None]:
+        return {
+            "response_id": self.response_id,
+            "item_id": self.item_id,
+            "conversation_item_id": self.conversation_item_id,
+            "content_part_type": self.content_part_type,
+            "response": self.response.value,
+            "audio_output": self.audio_output.value,
+            "user_transcript": self.user_transcript.value,
+            "agent_transcript": self.agent_transcript.value,
+            "usage": self.usage.value,
+            "search": self.search.value,
+        }
 
 
 class Qwen3Realtime(Realtime):
@@ -139,6 +245,7 @@ class Qwen3Realtime(Realtime):
         self._current_item_id = None
         self._current_participant: Participant | None = None
         self._input_turn_state = QwenInputTurnState()
+        self._response_projection = QwenResponseProjection()
         self._audio_transcription_model = audio_transcription_model
         self._turn_detection = turn_detection
         self._vad_threshold = vad_threshold
@@ -233,6 +340,13 @@ class Qwen3Realtime(Realtime):
 
     def _qwen_state_snapshot(self) -> dict[str, str]:
         return self._input_turn_state.snapshot()
+
+    def _qwen_response_snapshot(self) -> dict[str, str | None]:
+        return self._response_projection.snapshot()
+
+    def _qwen_usage_snapshot(self) -> dict[str, Any]:
+        usage = self._response_projection.usage_snapshot or QwenUsageSnapshot()
+        return usage.snapshot()
 
     async def simple_response(
         self,
@@ -364,15 +478,19 @@ class Qwen3Realtime(Realtime):
                 logger.debug("Qwen3Realtime session initialized successfully")
 
             elif event_type == "response.created":
-                self._current_response_id = event.get("response", {}).get("id")
-                self._is_responding = True
+                self._handle_response_created(event)
             elif event_type == "response.output_item.added":
-                self._current_item_id = event.get("item", {}).get("id")
+                self._handle_response_output_item_added(event)
+            elif event_type == "conversation.item.created":
+                self._handle_conversation_item_created(event)
+            elif event_type == "response.content_part.added":
+                self._handle_response_content_part_added(event)
+            elif event_type == "response.content_part.done":
+                self._handle_response_content_part_done(event)
+            elif event_type == "response.output_item.done":
+                self._handle_response_output_item_done(event)
             elif event_type == "response.done":
-                self._emit_agent_speech_transcription(text="", mode="final")
-                self._is_responding = False
-                self._current_response_id = None
-                self._current_item_id = None
+                self._handle_response_done(event)
             elif event_type == "input_audio_buffer.speech_started":
                 self._input_turn_state.mark_speech_started()
                 self._emit_user_speech_started()
@@ -384,17 +502,130 @@ class Qwen3Realtime(Realtime):
             elif event_type == "input_audio_buffer.committed":
                 self._input_turn_state.close_for_commit()
             elif event_type == "response.audio.delta":
-                audio_bytes = base64.b64decode(event["delta"])
-                pcm = PcmData.from_bytes(audio_bytes, 24000)
-                self._emit_audio_output_event(pcm=pcm)
+                self._handle_response_audio_delta(event)
+            elif event_type == "response.audio.done":
+                self._handle_response_audio_done(event)
+            elif event_type == "conversation.item.input_audio_transcription.delta":
+                transcript = event.get("delta", "")
+                if transcript:
+                    self._response_projection.user_transcript = TranscriptState.USER_TRANSCRIPT_DELTA
+                    self._emit_user_speech_transcription(text=transcript, mode="delta")
             elif event_type == "conversation.item.input_audio_transcription.completed":
                 transcript = event.get("transcript", "")
                 if transcript:
+                    self._response_projection.user_transcript = TranscriptState.USER_TRANSCRIPT_FINAL
                     self._emit_user_speech_transcription(text=transcript, mode="final")
             elif event_type == "response.audio_transcript.delta":
-                delta = event.get("delta", "")
-                if delta:
-                    self._emit_agent_speech_transcription(text=delta, mode="delta")
+                self._handle_response_audio_transcript_delta(event)
+            elif event_type == "response.audio_transcript.done":
+                self._handle_response_audio_transcript_done(event)
+
+    def _handle_response_created(self, event: dict[str, Any]) -> None:
+        response_id = _extract_response_id(event)
+        self._current_response_id = response_id
+        self._is_responding = True
+        self._response_projection.begin_response(response_id)
+        self._ensure_agent_speech_started(response_id)
+
+    def _handle_response_output_item_added(self, event: dict[str, Any]) -> None:
+        self._current_item_id = event.get("item", {}).get("id")
+        self._response_projection.item_id = self._current_item_id
+        self._response_projection.response = ResponseState.OUTPUT_ITEM_OPEN
+
+    def _handle_conversation_item_created(self, event: dict[str, Any]) -> None:
+        self._response_projection.conversation_item_id = event.get("item", {}).get("id")
+
+    def _handle_response_content_part_added(self, event: dict[str, Any]) -> None:
+        self._response_projection.response = ResponseState.CONTENT_PART_OPEN
+        part = event.get("part", {})
+        if isinstance(part, dict):
+            self._response_projection.content_part_type = part.get("type")
+
+    def _handle_response_content_part_done(self, event: dict[str, Any]) -> None:
+        part = event.get("part", {})
+        if isinstance(part, dict) and part.get("type"):
+            self._response_projection.content_part_type = part["type"]
+
+    def _handle_response_output_item_done(self, event: dict[str, Any]) -> None:
+        item_id = event.get("item", {}).get("id")
+        if item_id:
+            self._current_item_id = item_id
+            self._response_projection.item_id = item_id
+
+    def _handle_response_done(self, event: dict[str, Any]) -> None:
+        response_id = _extract_response_id(event) or self._current_response_id
+        self._response_projection.response_id = response_id
+        self._response_projection.response = ResponseState.COMPLETED
+        if "usage" in event:
+            self._parse_response_usage(response_id=response_id, usage=event.get("usage"))
+        elif self._response_projection.usage is UsageState.USAGE_ABSENT:
+            self._response_projection.search = SearchUsageState.SEARCH_USAGE_MISSING
+        # response.done is a lifecycle and usage boundary. The Qwen contract provides
+        # transcript finality through response.audio_transcript.done, so emitting an
+        # empty final here would invent assistant text the service did not send.
+        self._is_responding = False
+        self._current_response_id = None
+        self._current_item_id = None
+
+    def _handle_response_audio_delta(self, event: dict[str, Any]) -> None:
+        response_id = _extract_response_id(event) or self._current_response_id
+        self._response_projection.audio_output = LocalAudioOutputState.AUDIO_OUTPUT_STREAMING
+        audio_bytes = base64.b64decode(event["delta"])
+        pcm = PcmData.from_bytes(audio_bytes, 24000)
+        self._ensure_agent_speech_started(response_id)
+        self._emit_audio_output_event(pcm=pcm, response_id=response_id)
+
+    def _handle_response_audio_done(self, event: dict[str, Any]) -> None:
+        response_id = _extract_response_id(event) or self._current_response_id
+        self._response_projection.audio_output = LocalAudioOutputState.AUDIO_DONE_RECEIVED
+        self._emit_audio_output_done_event(response_id=response_id, interrupted=False)
+        self._response_projection.audio_output = LocalAudioOutputState.AUDIO_OUTPUT_DONE_EMITTED
+        self._emit_agent_speech_ended(response_id=response_id, interrupted=False)
+
+    def _handle_response_audio_transcript_delta(self, event: dict[str, Any]) -> None:
+        delta = event.get("delta", "")
+        if not delta:
+            return
+        self._response_projection.agent_transcript = TranscriptState.AGENT_TRANSCRIPT_DELTA
+        self._response_projection.agent_transcript_text += delta
+        self._emit_agent_speech_transcription(text=delta, mode="delta")
+
+    def _handle_response_audio_transcript_done(self, event: dict[str, Any]) -> None:
+        transcript = event.get("transcript")
+        if transcript is None:
+            transcript = event.get("text")
+        if transcript is None:
+            transcript = self._response_projection.agent_transcript_text
+        transcript = str(transcript)
+        self._response_projection.agent_transcript = TranscriptState.AGENT_TRANSCRIPT_FINAL
+        self._response_projection.agent_transcript_text = transcript
+        self._emit_agent_speech_transcription(text=transcript, mode="final")
+
+    def _ensure_agent_speech_started(self, response_id: str | None) -> None:
+        if self._response_projection.agent_speech_started:
+            return
+        self._response_projection.agent_speech_started = True
+        self._emit_agent_speech_started(response_id=response_id)
+
+    def _parse_response_usage(self, *, response_id: str | None, usage: object) -> None:
+        usage_snapshot = QwenUsageSnapshot(response_id=response_id, raw_usage=usage)
+        try:
+            if not isinstance(usage, dict):
+                raise TypeError(f"usage must be a dict, got {type(usage).__name__}")
+            usage_snapshot.total_tokens = _optional_int(usage.get("total_tokens"))
+            usage_snapshot.input_tokens = _optional_int(usage.get("input_tokens"))
+            usage_snapshot.output_tokens = _optional_int(usage.get("output_tokens"))
+            usage_snapshot.input_token_details = _optional_dict(usage.get("input_token_details"))
+            usage_snapshot.output_token_details = _optional_dict(usage.get("output_token_details"))
+            plugins = usage.get("plugins")
+            if isinstance(plugins, dict):
+                usage_snapshot.search_usage = _optional_dict(plugins.get("search"))
+            self._response_projection.usage = UsageState.USAGE_PARSED
+        except Exception as exc:
+            usage_snapshot.parse_error = str(exc)
+            self._response_projection.usage = UsageState.USAGE_PARSE_FAILED
+        self._response_projection.search = SearchUsageState.SEARCH_USAGE_SEEN if usage_snapshot.search_usage is not None else SearchUsageState.SEARCH_USAGE_MISSING
+        self._response_projection.usage_snapshot = usage_snapshot
 
     async def _on_interruption(self) -> None:
         """Handle user interruption of the current response."""
@@ -415,3 +646,31 @@ def _is_image_timing_error(error: dict[str, Any]) -> bool:
     param = str(error.get("param", "")).lower()
     text = " ".join((code, message, param))
     return "image" in text and ("before" in text or "timing" in text or "audio" in text or "input_image_buffer" in text)
+
+
+def _extract_response_id(event: dict[str, Any]) -> str | None:
+    response = event.get("response")
+    if isinstance(response, dict) and isinstance(response.get("id"), str):
+        return response["id"]
+    response_id = event.get("response_id")
+    if isinstance(response_id, str):
+        return response_id
+    return None
+
+
+def _optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise TypeError("boolean token counts are invalid")
+    if isinstance(value, int):
+        return value
+    raise TypeError(f"token count must be an int or None, got {type(value).__name__}")
+
+
+def _optional_dict(value: object) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    raise TypeError(f"usage detail must be a dict or None, got {type(value).__name__}")
