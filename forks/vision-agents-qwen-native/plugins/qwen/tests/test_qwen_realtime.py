@@ -9,8 +9,14 @@ import numpy as np
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from aiortc.mediastreams import MediaStreamTrack
+from av import VideoFrame
 from getstream.video.rtc import PcmData
-from vision_agents.core.llm.realtime import RealtimeAudioOutput
+from vision_agents.core.edge.types import Participant
+from vision_agents.core.llm.realtime import (
+    RealtimeAudioOutput,
+    RealtimeUserSpeechEnded,
+    RealtimeUserSpeechStarted,
+)
 from vision_agents.plugins.qwen import Realtime, qwen_realtime
 from vision_agents.plugins.qwen.client import Qwen3RealtimeClient
 
@@ -26,6 +32,7 @@ class FakeQwenClient:
         self.model = model
         self.config = config
         self.events: list[dict[str, Any]] = []
+        self.server_events: list[dict[str, Any]] = []
         FakeQwenClient.instances.append(self)
 
     async def connect(self) -> None:
@@ -35,8 +42,8 @@ class FakeQwenClient:
         return None
 
     async def read(self) -> AsyncIterator[dict[str, Any]]:
-        while False:
-            yield {}
+        for event in self.server_events:
+            yield event
 
     async def send_audio(self, pcm: PcmData) -> None:
         self.events.append({"type": "input_audio_buffer.append", "audio": "fake-audio"})
@@ -46,6 +53,24 @@ class FakeQwenClient:
 
     async def create_response(self) -> None:
         self.events.append({"type": "response.create"})
+
+    async def clear_audio(self) -> None:
+        self.events.append({"type": "input_audio_buffer.clear"})
+
+    async def send_frame(self, frame_bytes: bytes) -> None:
+        self.events.append({"type": "input_image_buffer.append", "image": "fake-image"})
+
+
+def fake_pcm() -> PcmData:
+    return PcmData(sample_rate=16000, format="s16", samples=np.zeros(160, dtype=np.int16))
+
+
+def fake_frame() -> VideoFrame:
+    return VideoFrame(2, 2, "rgb24")
+
+
+def fake_participant() -> Participant:
+    return Participant(original=None, user_id="user-1", id="participant-1")
 
 
 class FakeWebSocket:
@@ -125,7 +150,7 @@ async def test_manual_mode_sends_null_turn_detection_and_response_create(
     rt._instructions = "manual mode"
 
     await rt.connect()
-    await rt.simple_audio_response(PcmData(sample_rate=16000, format="s16", samples=np.zeros(160, dtype=np.int16)))
+    await rt.simple_audio_response(fake_pcm())
     await rt.commit_audio_and_create_response()
 
     client = fake_qwen_client.instances[0]
@@ -204,6 +229,218 @@ async def test_tools_and_search_config_payloads_do_not_include_unsupported_field
     for session in (tools_session, search_session):
         assert "tool_choice" not in session
         assert "parallel_tool_calls" not in session
+
+
+@pytest.mark.contract
+async def test_video_frame_not_sent_before_current_turn_audio(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "video gate"
+
+    await rt.connect()
+    await rt._send_video_frame(fake_frame())
+
+    client = fake_qwen_client.instances[0]
+    assert [event["type"] for event in client.events] == ["session.update"]
+    assert rt._qwen_state_snapshot() == {
+        "input_audio": "turn_empty",
+        "video": "track_available_waiting_audio",
+    }
+
+
+@pytest.mark.contract
+async def test_video_frame_sent_after_current_turn_audio(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "video gate"
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm())
+    await rt._send_video_frame(fake_frame())
+
+    client = fake_qwen_client.instances[0]
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+        "input_image_buffer.append",
+    ]
+    assert rt._qwen_state_snapshot() == {
+        "input_audio": "audio_appended",
+        "video": "send_allowed",
+    }
+
+
+@pytest.mark.contract
+async def test_speech_events_update_turn_and_close_image_window(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "speech events"
+    participant = fake_participant()
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm(), participant=participant)
+    client = fake_qwen_client.instances[0]
+    client.server_events.extend(
+        [
+            {"type": "input_audio_buffer.speech_started"},
+            {"type": "input_audio_buffer.speech_stopped"},
+        ]
+    )
+
+    await rt._process_events()
+    await rt._send_video_frame(fake_frame())
+
+    assert [type(event) for event in rt.output.peek()] == [
+        RealtimeUserSpeechStarted,
+        RealtimeUserSpeechEnded,
+    ]
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+    ]
+    assert rt._qwen_state_snapshot() == {
+        "input_audio": "speech_stopped",
+        "video": "send_closed_for_turn",
+    }
+
+
+@pytest.mark.contract
+async def test_manual_commit_and_clear_close_image_window(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    committed = Realtime(api_key="test-key", turn_detection=None)
+    committed._instructions = "manual commit"
+    await committed.connect()
+    await committed.simple_audio_response(fake_pcm())
+    await committed.commit_audio_and_create_response()
+    await committed._send_video_frame(fake_frame())
+
+    cleared = Realtime(api_key="test-key", turn_detection=None)
+    cleared._instructions = "manual clear"
+    await cleared.connect()
+    await cleared.simple_audio_response(fake_pcm())
+    await cleared.clear_audio()
+    await cleared._send_video_frame(fake_frame())
+
+    committed_events = [event["type"] for event in fake_qwen_client.instances[0].events]
+    cleared_events = [event["type"] for event in fake_qwen_client.instances[1].events]
+    assert committed_events == [
+        "session.update",
+        "input_audio_buffer.append",
+        "input_audio_buffer.commit",
+        "response.create",
+    ]
+    assert cleared_events == [
+        "session.update",
+        "input_audio_buffer.append",
+        "input_audio_buffer.clear",
+    ]
+    assert committed._qwen_state_snapshot() == {
+        "input_audio": "committed",
+        "video": "send_closed_for_turn",
+    }
+    assert cleared._qwen_state_snapshot() == {
+        "input_audio": "cleared",
+        "video": "send_closed_for_turn",
+    }
+
+
+@pytest.mark.contract
+async def test_input_audio_buffer_committed_event_closes_image_window(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "server committed"
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm())
+    client = fake_qwen_client.instances[0]
+    client.server_events.append({"type": "input_audio_buffer.committed"})
+
+    await rt._process_events()
+    await rt._send_video_frame(fake_frame())
+
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+    ]
+    assert rt._qwen_state_snapshot() == {
+        "input_audio": "committed",
+        "video": "send_closed_for_turn",
+    }
+
+
+@pytest.mark.contract
+async def test_track_reconnect_waits_for_current_turn_audio(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "track reconnect"
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm())
+    await rt._send_video_frame(fake_frame())
+    await rt.stop_watching_video_track()
+    await rt._on_video_track_reconnected()
+    await rt._send_video_frame(fake_frame())
+    await rt.simple_audio_response(fake_pcm())
+    await rt._send_video_frame(fake_frame())
+
+    client = fake_qwen_client.instances[0]
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+        "input_image_buffer.append",
+        "input_audio_buffer.append",
+        "input_image_buffer.append",
+    ]
+    assert rt._qwen_state_snapshot() == {
+        "input_audio": "audio_appended",
+        "video": "send_allowed",
+    }
+
+
+@pytest.mark.contract
+async def test_image_timing_error_suspends_until_new_audio_turn(
+    fake_qwen_client: type[FakeQwenClient],
+) -> None:
+    rt = Realtime(api_key="test-key")
+    rt._instructions = "image timing error"
+
+    await rt.connect()
+    await rt.simple_audio_response(fake_pcm())
+    await rt._send_video_frame(fake_frame())
+    client = fake_qwen_client.instances[0]
+    client.server_events.append(
+        {
+            "type": "error",
+            "error": {
+                "code": "invalid_request_error",
+                "message": "append image before append audio",
+                "param": "input_image_buffer",
+            },
+        }
+    )
+
+    await rt._process_events()
+    await rt._send_video_frame(fake_frame())
+    await rt.simple_audio_response(fake_pcm())
+    await rt._send_video_frame(fake_frame())
+
+    assert [event["type"] for event in client.events] == [
+        "session.update",
+        "input_audio_buffer.append",
+        "input_image_buffer.append",
+        "input_audio_buffer.append",
+        "input_image_buffer.append",
+    ]
+    assert rt._qwen_state_snapshot() == {
+        "input_audio": "audio_appended",
+        "video": "send_allowed",
+    }
 
 
 @pytest.mark.contract

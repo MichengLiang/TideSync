@@ -5,6 +5,8 @@ import os
 import uuid
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any, Literal, cast
 
 import aiortc
@@ -27,6 +29,67 @@ PLUGIN_NAME = "Qwen3Realtime"
 TurnDetectionMode = Literal["server_vad", "semantic_vad"]
 
 logger = logging.getLogger(__name__)
+
+
+class InputAudioState(StrEnum):
+    TURN_EMPTY = "turn_empty"
+    AUDIO_APPENDED = "audio_appended"
+    SPEECH_STARTED = "speech_started"
+    SPEECH_STOPPED = "speech_stopped"
+    COMMITTED = "committed"
+    CLEARED = "cleared"
+
+
+class VideoPermissionState(StrEnum):
+    NO_TRACK = "no_track"
+    TRACK_AVAILABLE_WAITING_AUDIO = "track_available_waiting_audio"
+    SEND_ALLOWED = "send_allowed"
+    SEND_CLOSED_FOR_TURN = "send_closed_for_turn"
+    TRACK_REMOVED = "track_removed"
+    TRACK_RECONNECTED_WAITING_AUDIO = "track_reconnected_waiting_audio"
+    SUSPENDED_AFTER_IMAGE_TIMING_ERROR = "suspended_after_image_timing_error"
+
+
+@dataclass(slots=True)
+class QwenInputTurnState:
+    input_audio: InputAudioState = InputAudioState.TURN_EMPTY
+    video: VideoPermissionState = VideoPermissionState.TRACK_AVAILABLE_WAITING_AUDIO
+
+    def mark_audio_appended(self) -> None:
+        self.input_audio = InputAudioState.AUDIO_APPENDED
+        self.video = VideoPermissionState.SEND_ALLOWED
+
+    def mark_speech_started(self) -> None:
+        self.input_audio = InputAudioState.SPEECH_STARTED
+        self.video = VideoPermissionState.SEND_ALLOWED
+
+    def close_for_speech_stopped(self) -> None:
+        self.input_audio = InputAudioState.SPEECH_STOPPED
+        self.video = VideoPermissionState.SEND_CLOSED_FOR_TURN
+
+    def close_for_commit(self) -> None:
+        self.input_audio = InputAudioState.COMMITTED
+        self.video = VideoPermissionState.SEND_CLOSED_FOR_TURN
+
+    def close_for_clear(self) -> None:
+        self.input_audio = InputAudioState.CLEARED
+        self.video = VideoPermissionState.SEND_CLOSED_FOR_TURN
+
+    def mark_track_removed(self) -> None:
+        self.video = VideoPermissionState.TRACK_REMOVED
+
+    def mark_track_reconnected(self) -> None:
+        self.input_audio = InputAudioState.TURN_EMPTY
+        self.video = VideoPermissionState.TRACK_RECONNECTED_WAITING_AUDIO
+
+    def suspend_after_image_timing_error(self) -> None:
+        self.video = VideoPermissionState.SUSPENDED_AFTER_IMAGE_TIMING_ERROR
+
+    def can_send_image(self) -> bool:
+        return self.video is VideoPermissionState.SEND_ALLOWED
+
+    def snapshot(self) -> dict[str, str]:
+        return {"input_audio": self.input_audio.value, "video": self.video.value}
 
 
 class Qwen3Realtime(Realtime):
@@ -75,8 +138,7 @@ class Qwen3Realtime(Realtime):
         self._current_response_id = None
         self._current_item_id = None
         self._current_participant: Participant | None = None
-        # The model requires us not to send any video frames until the audio is sent
-        self._audio_emitted_once = False
+        self._input_turn_state = QwenInputTurnState()
         self._audio_transcription_model = audio_transcription_model
         self._turn_detection = turn_detection
         self._vad_threshold = vad_threshold
@@ -155,14 +217,22 @@ class Qwen3Realtime(Realtime):
 
     async def commit_audio_and_create_response(self) -> None:
         await self._client.commit_audio()
+        self._input_turn_state.close_for_commit()
         await self._client.create_response()
+
+    async def clear_audio(self) -> None:
+        await self._client.clear_audio()
+        self._input_turn_state.close_for_clear()
 
     async def simple_audio_response(self, pcm: PcmData, participant: Participant | None = None) -> None:
         if not self.connected:
             return
         self._current_participant = participant
         await self._client.send_audio(pcm=pcm)
-        self._audio_emitted_once = True
+        self._input_turn_state.mark_audio_appended()
+
+    def _qwen_state_snapshot(self) -> dict[str, str]:
+        return self._input_turn_state.snapshot()
 
     async def simple_response(
         self,
@@ -201,6 +271,7 @@ class Qwen3Realtime(Realtime):
         # This method can be called multiple times with different forwarders
         # Remove handler from old forwarder if it exists
         await self.stop_watching_video_track()
+        await self._on_video_track_reconnected()
 
         self._video_forwarder = shared_forwarder or VideoForwarder(
             input_track=cast(VideoStreamTrack, track),
@@ -220,9 +291,9 @@ class Qwen3Realtime(Realtime):
         Parameters:
             frame: Video frame to send.
         """
-        if not self._audio_emitted_once:
-            # Wait until the audio is sent at least once before forwarding frames
-            # per the model spec.
+        if not self._input_turn_state.can_send_image():
+            # Qwen image permission is scoped to the current input turn. Historical
+            # audio from an older turn or track cannot authorize this frame.
             return
 
         loop = asyncio.get_running_loop()
@@ -245,7 +316,12 @@ class Qwen3Realtime(Realtime):
     async def stop_watching_video_track(self) -> None:
         if self._video_forwarder is not None:
             await self._video_forwarder.remove_frame_handler(self._send_video_frame)
+            self._video_forwarder = None
+            self._input_turn_state.mark_track_removed()
             logger.info("🛑 Stopped video forwarding to Qwen (participant left)")
+
+    async def _on_video_track_reconnected(self) -> None:
+        self._input_turn_state.mark_track_reconnected()
 
     @property
     def _client(self) -> Qwen3RealtimeClient:
@@ -276,6 +352,8 @@ class Qwen3Realtime(Realtime):
                 logger.error(
                     f"Error received from Qwen3Realtime API: {error}",
                 )
+                if _is_image_timing_error(error):
+                    self._input_turn_state.suspend_after_image_timing_error()
                 self._emit_error_event(
                     error=Exception(str(error)),
                     context="qwen_realtime_api",
@@ -296,8 +374,15 @@ class Qwen3Realtime(Realtime):
                 self._current_response_id = None
                 self._current_item_id = None
             elif event_type == "input_audio_buffer.speech_started":
+                self._input_turn_state.mark_speech_started()
+                self._emit_user_speech_started()
                 if self._is_responding:
                     await self._on_interruption()
+            elif event_type == "input_audio_buffer.speech_stopped":
+                self._input_turn_state.close_for_speech_stopped()
+                self._emit_user_speech_ended()
+            elif event_type == "input_audio_buffer.committed":
+                self._input_turn_state.close_for_commit()
             elif event_type == "response.audio.delta":
                 audio_bytes = base64.b64decode(event["delta"])
                 pcm = PcmData.from_bytes(audio_bytes, 24000)
@@ -322,3 +407,11 @@ class Qwen3Realtime(Realtime):
         self._is_responding = False
         self._current_response_id = None
         self._current_item_id = None
+
+
+def _is_image_timing_error(error: dict[str, Any]) -> bool:
+    code = str(error.get("code", "")).lower()
+    message = str(error.get("message", "")).lower()
+    param = str(error.get("param", "")).lower()
+    text = " ".join((code, message, param))
+    return "image" in text and ("before" in text or "timing" in text or "audio" in text or "input_image_buffer" in text)
