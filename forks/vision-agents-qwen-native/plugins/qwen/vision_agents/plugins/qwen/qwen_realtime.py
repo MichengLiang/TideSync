@@ -3,8 +3,9 @@ import base64
 import logging
 import os
 import uuid
+from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
-from typing import AsyncIterator, Optional, cast
+from typing import Any, Literal, cast
 
 import aiortc
 import av
@@ -13,13 +14,17 @@ from getstream.video.rtc import PcmData
 from vision_agents.core.edge.types import Participant
 from vision_agents.core.llm import Realtime
 from vision_agents.core.llm.llm import LLMResponseDelta, LLMResponseFinal
+from vision_agents.core.llm.llm_types import ToolSchema
 from vision_agents.core.utils.video_forwarder import VideoForwarder
 from vision_agents.core.utils.video_utils import frame_to_jpeg_bytes
 
 from .client import Qwen3RealtimeClient
 
-DEFAULT_BASE_URL = "wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime"
+DEFAULT_MODEL = "qwen3.5-omni-flash-realtime"
+DEFAULT_BASE_URL = "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
+DEFAULT_AUDIO_TRANSCRIPTION_MODEL = "qwen3-asr-flash-realtime"
 PLUGIN_NAME = "Qwen3Realtime"
+TurnDetectionMode = Literal["server_vad", "semantic_vad"]
 
 logger = logging.getLogger(__name__)
 
@@ -29,19 +34,23 @@ class Qwen3Realtime(Realtime):
 
     def __init__(
         self,
-        model: str = "qwen3.5-omni-plus-realtime",
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        voice: str = "Cherry",
+        model: str = DEFAULT_MODEL,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        voice: str = "Tina",
         fps: int = 1,
         include_video: bool = False,
         video_width: int = 1280,
         video_height: int = 720,
-        audio_transcription_model: str = "gummy-realtime-v1",
+        audio_transcription_model: str = DEFAULT_AUDIO_TRANSCRIPTION_MODEL,
+        turn_detection: TurnDetectionMode | None = "server_vad",
         vad_threshold: float = 0.1,
         vad_prefix_padding_ms: int = 500,
         vad_silence_duration_ms: int = 900,
-    ):
+        tools: list[ToolSchema | dict[str, Any]] | None = None,
+        enable_search: bool = False,
+        search_options: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(fps=fps)
         self.model = model
         self.voice = voice
@@ -54,10 +63,10 @@ class Qwen3Realtime(Realtime):
             raise ValueError("api_key is required")
         self._api_key = cast(str, api_key)
 
-        self._video_forwarder: Optional[VideoForwarder] = None
+        self._video_forwarder: VideoForwarder | None = None
         self._include_video = include_video
-        self._real_client: Optional[Qwen3RealtimeClient] = None
-        self._processing_task: Optional[asyncio.Task] = None
+        self._real_client: Qwen3RealtimeClient | None = None
+        self._processing_task: asyncio.Task | None = None
         self._video_width = video_width
         self._video_height = video_height
         self._executor = ThreadPoolExecutor(max_workers=1)
@@ -65,33 +74,23 @@ class Qwen3Realtime(Realtime):
         self._is_responding = False
         self._current_response_id = None
         self._current_item_id = None
-        self._current_participant: Optional[Participant] = None
+        self._current_participant: Participant | None = None
         # The model requires us not to send any video frames until the audio is sent
         self._audio_emitted_once = False
         self._audio_transcription_model = audio_transcription_model
+        self._turn_detection = turn_detection
         self._vad_threshold = vad_threshold
         self._vad_prefix_padding_ms = vad_prefix_padding_ms
         self._vad_silence_duration_ms = vad_silence_duration_ms
+        self._tools = list(tools or [])
+        self._enable_search = enable_search
+        self._search_options = dict(search_options or {})
 
-    async def connect(self):
+    async def connect(self) -> None:
         # Stop the processing task first in case we're reconnecting
         await self._stop_processing_task()
 
-        # Session configuration
-        session_config = {
-            "modalities": ["text", "audio"],
-            "voice": self.voice,
-            "instructions": self._instructions,
-            "input_audio_format": "pcm16",
-            "output_audio_format": "pcm24",
-            "input_audio_transcription": {"model": self._audio_transcription_model},
-            "turn_detection": {
-                "type": "server_vad",
-                "threshold": self._vad_threshold,
-                "prefix_padding_ms": self._vad_prefix_padding_ms,
-                "silence_duration_ms": self._vad_silence_duration_ms,
-            },
-        }
+        session_config = self._build_session_config()
         self._real_client = Qwen3RealtimeClient(
             api_key=self._api_key,
             base_url=self._base_url,
@@ -105,9 +104,60 @@ class Qwen3Realtime(Realtime):
         # Start the loop task
         self._start_processing_task()
 
-    async def simple_audio_response(
-        self, pcm: PcmData, participant: Optional[Participant] = None
-    ):
+    def _build_session_config(self) -> dict[str, Any]:
+        if self._tools and self._enable_search:
+            raise ValueError("Qwen realtime tools and enable_search are mutually exclusive")
+
+        session_config: dict[str, Any] = {
+            "modalities": ["text", "audio"],
+            "voice": self.voice,
+            "instructions": self._instructions,
+            "input_audio_format": "pcm",
+            "output_audio_format": "pcm",
+            # Qwen3.5 contract docs identify this ASR model; live tolerance for older
+            # gummy examples remains an external compatibility question.
+            "input_audio_transcription": {"model": self._audio_transcription_model},
+            "turn_detection": self._build_turn_detection_config(),
+        }
+        if self._tools:
+            session_config["tools"] = self._convert_tools_to_provider_format(self._tools)
+        if self._enable_search:
+            session_config["enable_search"] = True
+            if self._search_options:
+                session_config["search_options"] = self._search_options
+        return session_config
+
+    def _build_turn_detection_config(self) -> dict[str, Any] | None:
+        if self._turn_detection is None:
+            return None
+        if self._turn_detection not in ("server_vad", "semantic_vad"):
+            raise ValueError("turn_detection must be 'server_vad', 'semantic_vad', or None")
+        return {
+            "type": self._turn_detection,
+            "threshold": self._vad_threshold,
+            "prefix_padding_ms": self._vad_prefix_padding_ms,
+            "silence_duration_ms": self._vad_silence_duration_ms,
+        }
+
+    def _convert_tools_to_provider_format(self, tools: list[ToolSchema | dict[str, Any]]) -> list[dict[str, Any]]:
+        qwen_tools: list[dict[str, Any]] = []
+        for tool in tools:
+            if tool.get("type") == "function" and isinstance(tool.get("function"), dict):
+                qwen_tools.append(dict(tool))
+                continue
+            function: dict[str, Any] = {"name": tool["name"]}
+            if description := tool.get("description"):
+                function["description"] = description
+            if parameters := tool.get("parameters_schema"):
+                function["parameters"] = parameters
+            qwen_tools.append({"type": "function", "function": function})
+        return qwen_tools
+
+    async def commit_audio_and_create_response(self) -> None:
+        await self._client.commit_audio()
+        await self._client.create_response()
+
+    async def simple_audio_response(self, pcm: PcmData, participant: Participant | None = None) -> None:
         if not self.connected:
             return
         self._current_participant = participant
@@ -117,14 +167,12 @@ class Qwen3Realtime(Realtime):
     async def simple_response(
         self,
         text: str,
-        participant: Optional[Participant] = None,
+        participant: Participant | None = None,
     ) -> AsyncIterator[LLMResponseDelta | LLMResponseFinal]:
-        logger.warning(
-            f'Cannot reply to "{text}"; reason - Qwen3Realtime does not support text inputs'
-        )
+        logger.warning(f'Cannot reply to "{text}"; reason - Qwen3Realtime does not support text inputs')
         yield LLMResponseFinal()
 
-    async def close(self):
+    async def close(self) -> None:
         self._on_disconnected()
         await self.stop_watching_video_track()
         if self._processing_task is not None:
@@ -140,7 +188,7 @@ class Qwen3Realtime(Realtime):
     async def watch_video_track(
         self,
         track: aiortc.mediastreams.MediaStreamTrack,
-        shared_forwarder: Optional[VideoForwarder] = None,
+        shared_forwarder: VideoForwarder | None = None,
     ) -> None:
         """
         Start sending video frames using VideoForwarder.
@@ -220,7 +268,7 @@ class Qwen3Realtime(Realtime):
             self._processing_task.cancel()
             await self._processing_task
 
-    async def _process_events(self):
+    async def _process_events(self) -> None:
         async for event in self._client.read():
             event_type = event.get("type")
             if event_type == "error":
@@ -263,7 +311,7 @@ class Qwen3Realtime(Realtime):
                 if delta:
                     self._emit_agent_speech_transcription(text=delta, mode="delta")
 
-    async def _on_interruption(self):
+    async def _on_interruption(self) -> None:
         """Handle user interruption of the current response."""
         if not self._is_responding:
             return
