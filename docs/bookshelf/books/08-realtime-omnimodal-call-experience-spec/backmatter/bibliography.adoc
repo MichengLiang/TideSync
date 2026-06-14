@@ -9,6 +9,21 @@
 * [[[gherkin-reference]]] Cucumber Documentation, Gherkin Reference.
 * [[[structured-writing-conventions]]] 本书架《结构化书写约定标本》。
 * [[[openai-gpt4o]]] OpenAI, Hello GPT-4o.
+* [[[openai-realtime-webrtc]]] OpenAI Developers, Realtime API via WebRTC, https://developers.openai.com/api/docs/guides/realtime-webrtc.
+* [[[openai-pricing]]] OpenAI, API Pricing, https://openai.com/api/pricing/.
+* [[[openai-prompt-caching]]] OpenAI Developers, Prompt Caching, https://developers.openai.com/api/docs/guides/prompt-caching.
+* [[[openai-realtime-costs]]] OpenAI Developers, Managing Costs with the Realtime API, https://developers.openai.com/api/docs/guides/realtime-costs.
 * [[[google-live-api]]] Google AI for Developers, Gemini Live API.
 * [[[bytedance-seed-voice]]] 字节跳动 Seed, 豆包实时语音大模型公开材料。
 * [[[stcn-doubao-video-call]]] 证券时报, 豆包视频通话相关公开报道。
+* [[[finops-framework]]] FinOps Foundation, FinOps Framework, https://www.finops.org/framework/.
+* [[[finops-unit-economics]]] FinOps Foundation, Unit Economics Capability, https://www.finops.org/framework/capabilities/unit-economics/.
+* [[[finops-ai]]] FinOps Foundation, FinOps for AI, https://www.finops.org/framework/technology-categories/ai/.
+* [[[aws-cost-optimization]]] AWS Well-Architected Framework, Cost Optimization Pillar, https://docs.aws.amazon.com/wellarchitected/latest/cost-optimization-pillar/welcome.html.
+* [[[google-cloud-cost-optimization]]] Google Cloud Architecture Framework, Cost Optimization, https://docs.cloud.google.com/architecture/framework/cost-optimization.
+* [[[w3c-webrtc]]] W3C, WebRTC: Real-Time Communication in Browsers, https://www.w3.org/TR/webrtc/.
+* [[[w3c-webrtc-svc]]] W3C, WebRTC Scalable Video Coding Extensions, https://www.w3.org/TR/webrtc-svc/.
+* [[[rfc8836]]] IETF RFC 8836, Congestion Control Requirements for Interactive Real-Time Media, https://www.rfc-editor.org/info/rfc8836/.
+* [[[google-sre-slo]]] Google SRE Book, Service Level Objectives, https://sre.google/sre-book/service-level-objectives/.
+* [[[google-sre-implementing-slos]]] Google SRE Workbook, Implementing SLOs, https://sre.google/workbook/implementing-slos/.
+* [[[green-software-sci]]] Green Software Foundation, Software Carbon Intensity Specification, https://sci.greensoftware.foundation/.

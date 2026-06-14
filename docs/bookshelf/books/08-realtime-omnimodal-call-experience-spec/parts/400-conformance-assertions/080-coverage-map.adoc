@@ -45,9 +45,26 @@
 
 错误与恢复由 xref:permission-error-actionable[权限错误提供可行动路径]、xref:network-error-not-disguised[网络错误不伪装成思考]、xref:visual-uncertainty-honest[视觉不确定性被诚实表达]、xref:tool-failure-disclosed[工具失败被说明] 和 xref:recovery-state-consistent[恢复后状态一致] 覆盖。
 
+[#coverage-cost-governance-map.contract]
+=== 成本治理覆盖
+
+xref:cost-governance-identity[成本治理对象]由 xref:cost-degradation-visible[成本降级影响能力时可见]、xref:mode-switch-boundary-visible[模式切换后能力边界可见] 和 xref:unit-economics-evidence-traceable[单位经济证据可追踪] 覆盖。
+
+xref:experience-budget-and-hard-gates[体验预算与硬门槛]由 xref:cost-degradation-visible[成本降级影响能力时可见]、xref:context-compression-honest[上下文压缩保持诚实] 和 xref:cost-limited-tool-does-not-create-facts[成本受限工具不得产生工具事实] 覆盖。
+
+xref:modality-budget-model[模态预算模型]由 xref:mode-switch-boundary-visible[模式切换后能力边界可见] 覆盖。
+
+xref:visual-evidence-reference-assets[视觉证据与引用资产]由 xref:snapshot-reference-not-current-vision[快照引用不得冒充当前视觉]、xref:clip-reference-has-bounds[片段引用具有明确起止] 和 xref:user-stop-capture-stops-current-input[用户停止采集后当前输入停止] 覆盖。
+
+xref:user-control-automation-boundary[用户控制与自动调度边界]由 xref:user-stop-capture-stops-current-input[用户停止采集后当前输入停止] 和 xref:mode-switch-boundary-visible[模式切换后能力边界可见] 覆盖。
+
+xref:cost-degradation-projection[成本降级与公共投影]由 xref:cost-degradation-visible[成本降级影响能力时可见]、xref:duration-limit-projected[会话时长限制被投影]、xref:context-compression-honest[上下文压缩保持诚实] 和 xref:cost-limited-tool-does-not-create-facts[成本受限工具不得产生工具事实] 覆盖。
+
+xref:unit-economics-and-allocation[单位经济与成本分摊]由 xref:unit-economics-evidence-traceable[单位经济证据可追踪] 覆盖。
+
 [#coverage-limits.contract]
 === 覆盖边界
 
-本覆盖映射覆盖核心体验。扩展能力需要额外断言。屏幕共享、长期记忆、多人会话、数字人形象、业务工具动作和录制回放只有在实现声明扩展符合时，才需要进入扩展覆盖。
+本覆盖映射覆盖核心体验和成本治理。扩展能力需要额外断言。屏幕共享、长期记忆、多人会话、数字人形象、业务工具动作和录制回放只有在实现声明扩展符合时，才需要进入扩展覆盖。
 
 覆盖映射不替代测试执行。它说明书内断言与对象条件的关系。具体实现需要提交证据，说明这些断言在声明范围内如何通过。

@@ -1,0 +1,123 @@
+[#cost-conformance-assertions.assertion]
+== 成本符合性断言
+
+成本符合性断言验证成本策略是否仍然保持用户可依赖的体验承诺。断言检查用户动作和可观察结果，不检查内部账单、模型供应商或媒体实现细节。
+
+成本断言适用于实现声明的成本策略、模态策略、工具策略、时长策略、引用资产策略和降级策略。实现未声明的扩展能力不适用；实现声明的核心能力不能用成本理由取消核心断言。
+
+[#cost-degradation-visible.assertion, normative=must]
+=== 成本降级影响能力时可见
+
+前置状态:: 用户处于活跃会话；系统因成本、配额、容量、网络或资源压力降低某项会话能力。
+
+用户动作:: 用户继续使用受影响能力，例如提出视觉问题、等待语音回应、请求工具结果或追问历史上下文。
+
+期望结果:: 系统投影受限状态、替代模式或能力边界，并避免给出依赖已降级能力的确定回答。
+
+不符合表现:: 系统秘密降级；仍显示能力正常；视觉降级后继续声称正在看；工具关闭后给出工具事实；语音不可用时只返回文字且无说明。
+
+覆盖对象:: xref:cost-degradation-projection[成本降级与公共投影, rel=verifies]；xref:experience-budget-and-hard-gates[体验预算与硬门槛, rel=verifies]。
+
+[#snapshot-reference-not-current-vision.assertion, normative=must]
+=== 快照引用不得冒充当前视觉
+
+前置状态:: 用户在会话中捕获 `图 1`；当前摄像头画面已经移动到其他对象、关闭或不可用。
+
+用户动作:: 用户询问“图 1 里这个是什么”或询问“现在这个是什么”。
+
+期望结果:: 系统区分 `图 1` 与当前视觉现场。询问 `图 1` 时，回答基于快照或说明快照不足；询问当前画面时，使用当前视觉或说明当前视觉不可用。
+
+不符合表现:: 系统把 `图 1` 当成当前画面；系统用当前画面回答 `图 1` 问题；摄像头关闭后仍声称正在看现在；快照模糊时作确定回答。
+
+覆盖对象:: xref:snapshot-reference-asset[快照引用资产, rel=verifies]；xref:reference-asset-conformance[引用资产符合性, rel=verifies]。
+
+[#clip-reference-has-bounds.assertion, normative=must]
+=== 片段引用具有明确起止
+
+前置状态:: 用户通过长按、按钮或等价动作录制一段视频、屏幕或动态视觉片段。
+
+用户动作:: 用户结束录制，并围绕该片段提问。
+
+期望结果:: 系统让用户知道片段已经结束，生成可引用标识，并基于片段时间范围回答或说明片段不足以判断。
+
+不符合表现:: 用户无法判断是否仍在录制；片段结束后系统继续采集但无提示；系统把片段之后发生的变化当作片段内容；系统无法让用户引用该片段。
+
+覆盖对象:: xref:clip-reference-asset[片段引用资产, rel=verifies]；xref:reference-asset-lifecycle[引用资产生命周期, rel=verifies]。
+
+[#mode-switch-boundary-visible.assertion, normative=must]
+=== 模式切换后能力边界可见
+
+前置状态:: 系统从连续实时模式切换到事件触发视觉、快照指称、片段指称、语音优先、工具增强或受限模式。
+
+用户动作:: 用户继续提问、展示画面、引用资产或请求工具结果。
+
+期望结果:: 用户能够判断当前 AI 能使用哪些输入、不能使用哪些输入，以及回答依据实时画面、引用资产、工具结果还是普通会话上下文。
+
+不符合表现:: 模式变化只发生在内部；用户仍按实时视觉预期交互；系统用错误模式回答；快照模式下仍显示实时视觉参与；语音优先模式下视觉问题得到确定视觉回答。
+
+覆盖对象:: xref:modality-budget-model[模态预算模型, rel=verifies]；xref:public-projection-threshold[公共投影阈值, rel=verifies]。
+
+[#cost-limited-tool-does-not-create-facts.assertion, normative=must]
+=== 成本受限工具不得产生工具事实
+
+前置状态:: 用户请求需要外部搜索、位置、业务 API、知识库或设备工具；工具因成本、配额、授权或策略限制不可用。
+
+用户动作:: 用户等待 AI 回答。
+
+期望结果:: 系统说明未使用工具、工具不可用或只能回答不依赖工具的部分，并避免把缺失工具结果当作事实。
+
+不符合表现:: 系统伪造搜索结果；系统声称已查询业务系统但实际未查询；工具动作未执行却声称成功；系统把成本限制隐藏在确定回答中。
+
+覆盖对象:: xref:tool-cost-degradation[工具成本降级, rel=verifies]；xref:tool-cost[工具成本, rel=verifies]。
+
+[#duration-limit-projected.assertion, normative=should]
+=== 会话时长限制被投影
+
+前置状态:: 实现对连续实时视觉、会话总时长、工具次数、快照数量、片段数量或保存空间存在限制。
+
+用户动作:: 用户接近限制或触发超限动作。
+
+期望结果:: 系统在限制影响用户动作前投影限制，并说明继续受限模式、重新开始、删除资产、等待恢复或升级范围等路径。
+
+不符合表现:: 会话突然结束且无说明；视觉能力突然关闭；片段保存失败无提示；用户无法知道限制来自时长、配额、权限还是错误。
+
+覆盖对象:: xref:duration-and-quota-degradation[时长与配额降级, rel=verifies]；xref:session-duration-boundary[会话时长边界, rel=verifies]。
+
+[#context-compression-honest.assertion, normative=must]
+=== 上下文压缩保持诚实
+
+前置状态:: 系统因成本、上下文窗口、性能或保存策略对历史语音、视觉、工具结果或回答进行摘要、裁剪或丢弃。
+
+用户动作:: 用户追问被压缩、裁剪或丢弃的上下文。
+
+期望结果:: 系统基于仍可承接的上下文回答，或说明无法确定、未保留、已删除或需要用户重新提供。
+
+不符合表现:: 系统假装记得已丢弃内容；摘要丢失关键条件后仍作确定回答；删除引用资产后继续基于该资产回答；把未保存视觉当成长期记忆。
+
+覆盖对象:: xref:context-cost-degradation[上下文成本降级, rel=verifies]；xref:context-honesty[上下文诚实, rel=verifies]。
+
+[#user-stop-capture-stops-current-input.assertion, normative=must]
+=== 用户停止采集后当前输入停止
+
+前置状态:: 用户正在使用摄像头、麦克风、屏幕共享、快照捕获或片段录制。
+
+用户动作:: 用户停止对应采集或删除对应引用资产。
+
+期望结果:: 系统停止使用对应当前输入，更新状态，并在后续回答中不把已停止或已删除对象作为当前可用证据。
+
+不符合表现:: 停止后仍显示正在采集；停止屏幕共享后继续使用当前屏幕；删除快照后继续基于该图回答；片段停止后继续录制且无提示。
+
+覆盖对象:: xref:user-controlled-capture[用户控制的采集动作, rel=verifies]；xref:stop-capture[停止采集, rel=verifies]。
+
+[#unit-economics-evidence-traceable.assertion, normative=should]
+=== 单位经济证据可追踪
+
+前置状态:: 实现声明某项成本优化、单位经济改善或成本符合范围。
+
+用户动作:: 评审者检查声明材料和证据。
+
+期望结果:: 声明能够追踪到适用范围、成本分摊对象、单位指标、模态策略、断言结果和证据材料。
+
+不符合表现:: 只提供总账单下降；只提供模型能力列表；无法说明成本降低来自哪类资源；无法说明优化是否影响视觉、语音、工具或上下文承诺。
+
+覆盖对象:: xref:unit-economics-and-allocation[单位经济与成本分摊, rel=verifies]；xref:statement-evidence[证据材料, rel=verifies]。

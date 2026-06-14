@@ -1,0 +1,67 @@
+[#cost-decision-surface.contract]
+== 读者与决策表面
+
+本部的读者不是抽象读者。每类读者消费成本治理章节，是为了完成不同的判断、设计、实现、验收、运营或审查动作。成本治理章节必须让这些动作获得共同的对象语言。
+
+[#product-cost-decision.contract]
+=== 产品负责人的决策表面
+
+产品负责人使用本部判断一个用户场景需要哪种模态预算。连续实时视觉、事件触发视觉、快照、短视频片段、语音优先和工具增强不是同一成本等级的界面变体；它们是不同的体验承诺。
+
+产品负责人通过xref:modality-budget-model[模态预算模型, rel=depends-on]判断任务是否具有实时必要性，通过xref:visual-evidence-reference-assets[视觉证据与引用资产, rel=depends-on]判断是否需要稳定指称对象，通过xref:user-control-automation-boundary[用户控制与自动调度边界, rel=depends-on]判断哪些控制面应交给用户。
+
+没有本部时，产品讨论容易在“全部实时更强”和“降低成本更省”之间摆动。有了本部，产品负责人可以说明：某个花草识别场景适合快照指称，因为对象静态、实时必要性低、指称稳定性高；某个维修指导场景适合连续实时或事件触发视觉，因为操作过程动态、视觉新鲜度要求高、打断控制重要。
+
+[#architecture-cost-decision.contract]
+=== 架构师的决策表面
+
+架构师使用本部划分执行位置和资源责任。端侧、边缘和云侧分别承担不同成本：端侧控制采集、预处理和用户动作；边缘承担实时连接、带宽适配和会话路由；云侧承担高质量模型推理、工具调用、长上下文和成本归因。
+
+架构师通过xref:cost-resource-ledger[成本与资源账本, rel=depends-on]确定哪些资源需要计量，通过xref:edge-cloud-coordination[端云协同与执行位置, rel=depends-on]确定哪些处理可以前移、后移或分层，通过xref:cost-degradation-projection[成本降级与公共投影, rel=depends-on]确定哪些内部调度会改变用户可依赖行为。
+
+没有本部时，架构优化容易只追求吞吐、延迟或账单。有了本部，架构师需要同时回答：这个优化是否改变当前视觉现场、语音输出、工具依据、打断能力、上下文承接或隐私保存。
+
+[#developer-cost-decision.contract]
+=== 开发者的决策表面
+
+开发者使用本部审查成本策略的设计点资格。一个策略进入实现前，需要说明它回应的成本事实、服务的体验目标、改变的规约、带来的成本和验证方式。
+
+开发者通过xref:experience-budget-and-hard-gates[体验预算与硬门槛, rel=depends-on]判断策略是否触碰核心符合，通过xref:cost-resource-ledger[成本与资源账本, rel=depends-on]判断策略减少哪类成本，通过xref:cost-conformance-assertions[成本符合性断言, rel=depends-on]判断策略如何被外部观察。
+
+例如，降低视觉采样频率不是一个独立完成声明。开发者需要说明采样降低影响什么场景，用户提出当前视觉问题时如何保证视觉新鲜度，无法保证时如何投影限制，测试如何证明旧画面不会冒充当前画面。
+
+[#testing-cost-decision.contract]
+=== 测试工程师的决策表面
+
+测试工程师使用本部把成本治理转化为黑盒断言。成本策略不是只看内部指标；它必须在用户动作和可观察结果中成立。
+
+测试工程师通过xref:cost-conformance-assertions[成本符合性断言, rel=depends-on]验证快照是否冒充当前视觉、片段是否有明确起止、成本降级是否投影、工具限制是否诚实、会话时长限制是否可见、上下文压缩是否伪装完整记忆。
+
+没有本部时，测试只能检查“功能是否能跑”。有了本部，测试可以检查“成本策略是否仍然符合体验契约”。
+
+[#operations-cost-decision.contract]
+=== 运营与财务负责人的决策表面
+
+运营与财务负责人使用本部建立单位经济和成本归因。实时全模态体验的价值单位不是单一会话分钟，也不是模型请求次数。一次成功视觉回答、一次稳定引用资产、一次工具增强回答、一次成功打断恢复，都可能成为更适合的成本单位。
+
+运营与财务负责人通过xref:unit-economics-and-allocation[单位经济与成本分摊, rel=depends-on]把成本关联到用户、租户、平台、场景、模态、模型、工具和任务结果。这样可以识别高成本高价值路径、高成本低价值路径和低成本可替代路径。
+
+没有本部时，成本优化容易变成整体压缩。有了本部，运营可以判断哪些场景值得高成本连续实时，哪些场景应转入快照、片段或语音优先。
+
+[#privacy-cost-decision.contract]
+=== 安全隐私负责人的决策表面
+
+安全隐私负责人使用本部审查成本策略对采集、保存、删除和外部传输的影响。降低成本的快照和片段策略，可能减少持续采集，也可能增加保存视觉证据的隐私责任。
+
+安全隐私负责人通过xref:visual-evidence-reference-assets[视觉证据与引用资产, rel=depends-on]审查快照和片段保存范围，通过xref:user-control-automation-boundary[用户控制与自动调度边界, rel=depends-on]审查用户停止、删除和撤回动作，通过xref:privacy-projection[隐私投影, rel=depends-on]审查采集提示和结束后数据处理。
+
+成本降低不能绕过隐私边界。一个策略如果减少实时视频传输，却默默保存截图或片段，仍然需要公共说明和删除语义。
+
+[#supplier-review-cost-decision.contract]
+=== 供应商评审者的决策表面
+
+供应商评审者使用本部要求实现者提交可审查的成本声明。声明应说明适用范围、模态策略、采样边界、工具限制、模型路由、保存策略、单位经济口径和断言证据。
+
+供应商评审者通过xref:conformance-statement[符合性声明, rel=depends-on]追踪范围和偏离，通过xref:cost-conformance-assertions[成本符合性断言, rel=depends-on]检查黑盒证据，通过xref:cost-nonconformance-cases[成本不符合案例, rel=depends-on]识别典型误导。
+
+模型能力列表、演示视频和账单截图都不能单独证明成本治理成立。成本治理证据必须说明：给定什么场景、使用什么模态策略、消耗什么资源、用户看见什么状态、断言如何通过。
