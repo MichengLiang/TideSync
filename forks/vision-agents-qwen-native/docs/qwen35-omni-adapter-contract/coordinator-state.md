@@ -135,7 +135,7 @@ Future batches, not yet dispatched after Batch 05:
 
 - Batch 06: structured Qwen errors, reconnect state reset, evidence closure, and full PR conformance statement.
 
-Batch 05, ready for dispatch:
+Batch 05, review accepted:
 
 - Name: `batch-05-tools-search-tool-errors`
 - Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-05-tools-search-tool-errors.md`
@@ -146,7 +146,16 @@ Batch 05, ready for dispatch:
 - Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-05-tools-search-tool-errors.md`
 - Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-05-builder-dispatch-prompt.md`
 - Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-05-reviewer-dispatch-prompt.md`
-- Required implementation scope: registry tool schema injection, Qwen function call execution, explainable tool failure output, and preservation of existing search/usage behavior. Batch 05 excludes full structured Qwen error taxonomy, reconnect closure, and final conformance closure.
+- Implementation commit: `9e97bcf feat: execute Qwen function calls through registry`
+- Reviewed final HEAD: `c994f473bfc6021afad39f1d0b6cf26b56f1f851`
+- Review verdict: `APPROVED_WITH_NOTES`
+- Review report: `docs/qwen35-omni-adapter-contract/reports/batch-05-tools-search-tool-errors-review.md`
+- Promotion decision: Batch 05 may be promoted. Non-blocking notes are that tool state projection is latest-call oriented rather than a full per-call history, and broader live Qwen function-call payload variants remain unverified without live service access.
+- Verification:
+  - `uv run pytest tests/test_vision_agents_runtime_path.py`
+  - `uv run pytest forks/vision-agents-qwen-native/plugins/qwen/tests`
+  - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
+  - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
 ## Role Registry
 
