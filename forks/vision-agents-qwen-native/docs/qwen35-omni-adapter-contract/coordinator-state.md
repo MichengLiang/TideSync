@@ -131,9 +131,19 @@ Batch 04, review accepted:
   - `uv run ruff check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
   - `uv run ruff format --check forks/vision-agents-qwen-native/plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py forks/vision-agents-qwen-native/plugins/qwen/tests/test_qwen_realtime.py`
 
-Future batches, not yet dispatched after Batch 05:
+Batch 06, ready for dispatch:
 
-- Batch 06: structured Qwen errors, reconnect state reset, evidence closure, and full PR conformance statement.
+- Name: `batch-06-structured-errors-reconnect-conformance`
+- Handoff: `docs/qwen35-omni-adapter-contract/handoffs/batch-06-structured-errors-reconnect-conformance.md`
+- Review package: `docs/qwen35-omni-adapter-contract/review-packages/batch-06-structured-errors-reconnect-conformance-spec-review.md`
+- Owner role: persistent builder subagent.
+- Expected branch: `feature/qwen35-error-reconnect-conformance`
+- Expected report: `docs/qwen35-omni-adapter-contract/reports/batch-06-structured-errors-reconnect-conformance.md`
+- Expected PR body draft: `docs/qwen35-omni-adapter-contract/pr-bodies/batch-06-structured-errors-reconnect-conformance.md`
+- Expected final conformance statement: `docs/qwen35-omni-adapter-contract/final-conformance-statement.md`
+- Dispatch prompt: `docs/qwen35-omni-adapter-contract/handoffs/batch-06-builder-dispatch-prompt.md`
+- Review dispatch prompt: `docs/qwen35-omni-adapter-contract/review-packages/batch-06-reviewer-dispatch-prompt.md`
+- Required implementation scope: structured Qwen error fields, session config failure state, recoverable reconnect state reset, usage parse evidence closure, and final conformance statement. Batch 06 excludes unrelated product behavior and live verification unless credentials, cost authorization, and service availability are explicit.
 
 Batch 05, review accepted:
 
@@ -224,6 +234,16 @@ Batch 05 authoritative sections:
 - Function registry carrier: `parts/200-current-system/040-vision-agents-core-carriers.adoc:29-36`
 - Test evidence: `parts/500-evidence-governance/010-test-evidence-contract.adoc:13-34`
 
+Batch 06 authoritative sections:
+
+- Error contract: `parts/300-target-contract/080-error-contract.adoc:1-37`
+- Error assertions: `parts/400-conformance-assertions/080-error-assertions.adoc:1-80`
+- Session and error state: `parts/300-target-contract/050-state-model.adoc:8-14`, `75-80`
+- Error event contract: `parts/300-target-contract/040-server-event-contract.adoc:65-70`
+- PR conformance statement: `parts/500-evidence-governance/020-pr-conformance-statement.adoc:1-41`
+- Upstream provenance: `parts/500-evidence-governance/030-upstream-provenance.adoc:1-39`
+- Test evidence: `parts/500-evidence-governance/010-test-evidence-contract.adoc:13-34`
+
 Current baseline facts:
 
 - `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` maps Qwen response lifecycle, audio done, transcript done, and usage state after Batch 03.
@@ -235,6 +255,7 @@ Current baseline facts:
 - `agents-core/vision_agents/core/llm/realtime.py` already exposes `RealtimeAudioOutputDone(interrupted=True)` and `RealtimeAgentSpeechEnded(interrupted=True)`.
 - `agents-core/vision_agents/core/agents/inference/realtime_flow.py` already turns interrupted audio done into local `interrupt()` and downstream audio flush.
 - `agents-core/vision_agents/core/llm/llm.py` owns `function_registry`, `get_available_functions()`, and `call_function(name, arguments)` for Batch 05 tool execution.
+- `plugins/qwen/vision_agents/plugins/qwen/qwen_realtime.py` still needs Batch 06 structured error snapshots, session config failure state, recoverable reconnect reset projection, and final conformance evidence closure.
 
 ## Open Blockers
 
